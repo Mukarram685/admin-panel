@@ -1,0 +1,62 @@
+.tableContainer {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 12px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    text-align: left;
+}
+
+.th {
+    padding: 16px 20px;
+    color: #64748b;
+    font-weight: 600;
+    border-bottom: 1px solid var(--card-border);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.tr {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tr:hover {
+    background: rgba(255, 255, 255, 0.03);
+    transform: scale(1.002);
+}
+
+.td {
+    padding: 18px 20px;
+    color: #cbd5e1;
+    font-size: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.empty {
+    text-align: center;
+    padding: 48px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.headerRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding: 0 4px;
+}
+
+.title {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.5px;
+    color: #f8fafc;
+}
