@@ -9,6 +9,7 @@ export default function SchedulesPage() {
     const [loading, setLoading] = useState(true);
     const [availableRoutes, setAvailableRoutes] = useState<any[]>([]);
     const [availableBuses, setAvailableBuses] = useState<any[]>([]);
+    const [availableOperators, setAvailableOperators] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState("");
@@ -16,6 +17,7 @@ export default function SchedulesPage() {
     const [formData, setFormData] = useState({
         routeId: "",
         busId: "",
+        operatorId: "",
         departureDate: "",
         departureTime: "08:00",
         arrivalTime: "12:00",
@@ -36,16 +38,22 @@ export default function SchedulesPage() {
 
     const loadDropdowns = async () => {
         try {
-            const [routesRes, busesRes] = await Promise.all([
+            const [routesRes, busesRes, operatorsRes] = await Promise.all([
                 fetchAPI("/routes/allRoutes"),
-                fetchAPI("/buses/company")
+                fetchAPI("/buses/company"),
+                fetchAPI("/operator/company")
             ]);
             const rts = routesRes.data || routesRes.routes || [];
             const bss = busesRes.buses || busesRes.data || [];
+            const ops = operatorsRes.operators || operatorsRes.data || [];
+            
             setAvailableRoutes(rts);
             setAvailableBuses(bss);
+            setAvailableOperators(ops);
+
             if (rts.length > 0 && !formData.routeId) setFormData(prev => ({ ...prev, routeId: rts[0]._id }));
             if (bss.length > 0 && !formData.busId) setFormData(prev => ({ ...prev, busId: bss[0]._id }));
+            if (ops.length > 0 && !formData.operatorId) setFormData(prev => ({ ...prev, operatorId: ops[0]._id }));
         } catch (err) {
             console.error("Failed to load reference data", err);
         }
@@ -86,6 +94,26 @@ export default function SchedulesPage() {
             )
         },
         { key: "bus", header: "Bus", render: (r: any) => r.bus ? `${r.bus.busNumber} (${r.bus.type})` : "N/A" },
+        { 
+            key: "operator", 
+            header: "Operator", 
+            render: (r: any) => {
+                if (!r.operator) return <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Unassigned</span>;
+                
+                // Handle populated object
+                if (typeof r.operator === 'object' && r.operator.name) {
+                    return (
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: 600 }}>{r.operator.name}</span>
+                            <span style={{ fontSize: '11px', color: '#64748b' }}>{r.operator.email}</span>
+                        </div>
+                    );
+                }
+                
+                // Handle case where it's just an ID (not populated)
+                return <span style={{ fontSize: '12px', color: '#94a3b8' }}>ID: {String(r.operator).substring(0, 8)}...</span>;
+            }
+        },
         { key: "departureDate", header: "Date", render: (r: any) => new Date(r.departureDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) },
         { 
             key: "time", header: "Time", render: (r: any) => (
@@ -146,6 +174,14 @@ export default function SchedulesPage() {
                         <select required className="form-input" value={formData.busId} onChange={e => setFormData({ ...formData, busId: e.target.value })}>
                             <option value="" disabled>Choose a bus...</option>
                             {availableBuses.map(b => <option key={b._id} value={b._id}>{b.busNumber} - {b.type} ({b.totalSeats} seats)</option>)}
+                        </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Select Operator</label>
+                        <select required className="form-input" value={formData.operatorId} onChange={e => setFormData({ ...formData, operatorId: e.target.value })}>
+                            <option value="" disabled>Choose an operator...</option>
+                            {availableOperators.map(o => <option key={o._id} value={o._id}>{o.name} ({o.email})</option>)}
                         </select>
                     </div>
 
