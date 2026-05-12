@@ -160,6 +160,28 @@ export default function Home() {
         {error && <p className={styles.error}>{error}</p>}
       </header>
 
+      {user?.role === 'operator' && (
+        <section className={styles.operatorHeader}>
+          <div className={styles.operatorInfo}>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Affiliated Company</span>
+              <span className={styles.infoValue}>{user?.company?.name || "Independent"}</span>
+            </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Operator Email</span>
+              <span className={styles.infoValue}>{user?.email}</span>
+            </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Personnel Name</span>
+              <span className={styles.infoValue}>{user?.name}</span>
+            </div>
+          </div>
+          <div className={styles.operatorBadge}>
+            {user?.operatorType?.replace('_', ' ').toUpperCase() || 'TRIP OPERATOR'}
+          </div>
+        </section>
+      )}
+
       {loading ? (
         <div className={styles.loading}>
             <div className={styles.spinner}></div>
@@ -202,7 +224,7 @@ export default function Home() {
           {user?.role === 'operator' ? (
             <div className={styles.operatorContent}>
               <DataTable 
-                title="Your Duty Schedule" 
+                title="Your Assigned Tasks" 
                 columns={tripColumns} 
                 data={trips} 
                 loading={loading}

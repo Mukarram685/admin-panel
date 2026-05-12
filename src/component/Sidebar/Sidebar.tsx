@@ -1,10 +1,24 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import styles from "./Sidebar.module.css";
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const [userRole, setUserRole] = useState<string>("superadmin"); // Default fallback or state
+
+    useEffect(() => {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                setUserRole(user.role || "superadmin");
+            } catch (e) {
+                console.error("Failed to parse user from localStorage");
+            }
+        }
+    }, []);
 
     const navItems = [
         { 
@@ -27,7 +41,7 @@ export default function Sidebar() {
         { 
             label: "Buses", 
             path: "/buses", 
-            roles: ["superadmin", "companyadmin", "operator"],
+            roles: ["superadmin", "companyadmin"],
             icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="22" height="13" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line><line x1="1" y1="15" x2="23" y2="15"></line></svg> 
         },
         { 
@@ -39,25 +53,32 @@ export default function Sidebar() {
         { 
             label: "Schedules", 
             path: "/schedules", 
+            roles: ["superadmin", "companyadmin", "operator"],
             icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> 
         },
         { 
             label: "Bookings", 
             path: "/bookings", 
+            roles: ["superadmin", "companyadmin"],
             icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> 
         },
     ];
+
+    const visibleItems = navItems.filter(item => {
+        if (!item.roles) return true; // Always show items without roles
+        return item.roles.includes(userRole);
+    });
 
     if (pathname === "/login") return null;
 
     return (
         <aside className={styles.sidebar}>
             <div className={styles.logo}>
-                <span className={styles.logoIcon}>B</span>
+                {/* <span className={styles.logoIcon}>B</span> */}
                 <span className={styles.logoText}>BookNGo <small>Admin</small></span>
             </div>
             <nav className={styles.nav}>
-                {navItems.map((item) => (
+                {visibleItems.map((item) => (
                     <Link
                         key={item.path}
                         href={item.path}

@@ -9,16 +9,43 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     const router = useRouter();
     const pathname = usePathname();
 
+    const routePermissions: Record<string, string[]> = {
+        "/": ["superadmin", "companyadmin", "operator"],
+        "/companies": ["superadmin"],
+        "/operators": ["superadmin", "companyadmin"],
+        "/buses": ["superadmin", "companyadmin"],
+        "/routes": ["superadmin", "companyadmin"],
+        "/schedules": ["superadmin", "companyadmin", "operator"],
+        "/bookings": ["superadmin", "companyadmin"],
+    };
+
     useEffect(() => {
         const token = localStorage.getItem("accessToken");
+        const userStr = localStorage.getItem("user");
+        
         if (!token && pathname !== "/login") {
             router.push("/login");
-        } else {
+            return;
+        }
+
+        if (token && userStr) {
+            const user = JSON.parse(userStr);
+            const allowedRoles = routePermissions[pathname];
+            
+            if (allowedRoles && !allowedRoles.includes(user.role)) {
+                console.warn(`Unauthorized access attempt to ${pathname} by ${user.role}`);
+                router.push("/");
+                return;
+            }
             setIsAuthenticated(true);
+        } else if (pathname === "/login") {
+            setIsAuthenticated(false);
+        } else {
+            router.push("/login");
         }
     }, [pathname, router]);
 
-    if (isAuthenticated === null) {
+    if (isAuthenticated === null && pathname !== "/login") {
         // Prevents UI flicker while checking authentication state
         return <div style={{ height: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--background)", color: "white" }}>Authenticating...</div>;
     }

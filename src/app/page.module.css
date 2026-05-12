@@ -200,3 +200,77 @@
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+.operatorHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 24px;
+    margin-top: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.operatorInfo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+}
+
+.infoItem {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.infoLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.infoValue {
+    font-size: 16px;
+    font-weight: 600;
+    color: #f8fafc;
+}
+
+.operatorBadge {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary);
+    padding: 6px 12px;
+    border-radius: 100px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.pTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+}
+
+.pTable th {
+    text-align: left;
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #64748b;
+    font-size: 13px;
+}
+
+.pTable td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 14px;
+    color: #f8fafc;
+}
