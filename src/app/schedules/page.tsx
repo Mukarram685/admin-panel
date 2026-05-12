@@ -159,6 +159,19 @@ export default function SchedulesPage() {
             )
         },
         { key: "bus", header: "Bus", render: (r: any) => `${r.bus?.busNumber} (${r.bus?.type})` },
+        { 
+            key: "operator", header: "Operator", render: (r: any) => {
+                if (r.operator && typeof r.operator === 'object') {
+                    return (
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: 600, color: '#f8fafc' }}>{r.operator.name}</span>
+                            <span style={{ fontSize: '11px', color: '#64748b' }}>{r.operator.email}</span>
+                        </div>
+                    );
+                }
+                return <span style={{ fontSize: '12px', color: '#94a3b8' }}>{r.operator ? `ID: ${String(r.operator).substring(0, 8)}...` : 'N/A'}</span>;
+            }
+        },
         { key: "departureDate", header: "Date", render: (r: any) => new Date(r.departureDate).toLocaleDateString() },
         { key: "time", header: "Time", render: (r: any) => `${r.departureTime} - ${r.arrivalTime}` },
         {
@@ -210,20 +223,65 @@ export default function SchedulesPage() {
                 loading={loading} 
             />
 
-            {/* Create Schedule Modal (Admin Only) */}
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Dispatch New Schedule">
+            <Modal 
+                isOpen={isModalOpen} 
+                onClose={() => setIsModalOpen(false)} 
+                title="Dispatch New Schedule"
+            >
                 <form onSubmit={handleCreate}>
+                    {error && <div className="error-text">{error}</div>}
+
                     <div className="form-group">
                         <label>Select Route</label>
                         <select required className="form-input" value={formData.routeId} onChange={e => setFormData({ ...formData, routeId: e.target.value })}>
-                            <option value="">Choose a route...</option>
-                            {availableRoutes.map(r => <option key={r._id} value={r._id}>{r.fromCity} -&gt; {r.toCity}</option>)}
+                            <option value="" disabled>Choose a route...</option>
+                            {availableRoutes.map(r => <option key={r._id} value={r._id}>{r.fromCity} → {r.toCity} ({r.distance}km)</option>)}
                         </select>
                     </div>
-                    {/* ... other form fields ... */}
+
+                    <div className="form-group">
+                        <label>Select Bus</label>
+                        <select required className="form-input" value={formData.busId} onChange={e => setFormData({ ...formData, busId: e.target.value })}>
+                            <option value="" disabled>Choose a bus...</option>
+                            {availableBuses.map(b => <option key={b._id} value={b._id}>{b.busNumber} - {b.type} ({b.totalSeats} seats)</option>)}
+                        </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Select Operator</label>
+                        <select required className="form-input" value={formData.operatorId} onChange={e => setFormData({ ...formData, operatorId: e.target.value })}>
+                            <option value="" disabled>Choose an operator...</option>
+                            {availableOperators.map(o => <option key={o._id} value={o._id}>{o.name} ({o.email})</option>)}
+                        </select>
+                    </div>
+
+                    <div className="form-grid">
+                        <div className="form-group">
+                            <label>Departure Date</label>
+                            <input type="date" required className="form-input" value={formData.departureDate} onChange={e => setFormData({ ...formData, departureDate: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                            <label>Fare (Rs)</label>
+                            <input type="number" required min={100} className="form-input" value={formData.fare} onChange={e => setFormData({ ...formData, fare: Number(e.target.value) })} />
+                        </div>
+                    </div>
+
+                    <div className="form-grid">
+                        <div className="form-group">
+                            <label>Departure Time</label>
+                            <input type="time" required className="form-input" value={formData.departureTime} onChange={e => setFormData({ ...formData, departureTime: e.target.value })} />
+                        </div>
+                        <div className="form-group">
+                            <label>Arrival Time</label>
+                            <input type="time" required className="form-input" value={formData.arrivalTime} onChange={e => setFormData({ ...formData, arrivalTime: e.target.value })} />
+                        </div>
+                    </div>
+
                     <div className="modal-actions">
                         <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">Cancel</button>
-                        <button type="submit" disabled={creating} className="btn-primary">Create</button>
+                        <button type="submit" disabled={creating} className="btn-primary">
+                            {creating ? 'Dispatching...' : 'Dispatch Schedule'}
+                        </button>
                     </div>
                 </form>
             </Modal>
@@ -313,6 +371,18 @@ export default function SchedulesPage() {
                 .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
                 .page-title { font-size: 32px; font-weight: 800; margin: 0; color: #f8fafc; }
                 .page-subtitle { color: #94a3b8; margin: 4px 0 0 0; font-size: 15px; }
+
+                .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+                .form-group { margin-bottom: 20px; }
+                .form-group label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
+                .form-input { width: 100%; padding: 12px 16px; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: white; outline: none; transition: all 0.2s; }
+                .form-input:focus { border-color: var(--primary); background: rgba(0, 0, 0, 0.3); }
+                
+                .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; }
+                .btn-secondary { background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); color: #94a3b8; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+                .btn-secondary:hover { background: rgba(255, 255, 255, 0.05); color: white; }
+                
+                .error-text { background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 12px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; border: 1px solid rgba(239, 68, 68, 0.2); }
                 
                 .manifest-header { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(255, 255, 255, 0.05); }
                 .m-info { display: flex; flex-direction: column; gap: 4px; }
