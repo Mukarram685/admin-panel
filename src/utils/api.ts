@@ -1,4 +1,4 @@
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://backend-fyp-kappa.vercel.app/api/v1').replace(/\/+$/, '');
 
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     let token = '';
@@ -12,13 +12,14 @@ export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
         ...options.headers,
     };
 
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const response = await fetch(`${BASE_URL}${cleanEndpoint}`, {
         ...options,
         headers,
     });
 
     if (!response.ok) {
-        if (response.status === 401 && typeof window !== 'undefined') {
+        if ((response.status === 401 || response.status === 403) && typeof window !== 'undefined') {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('user');
             window.location.href = '/login';

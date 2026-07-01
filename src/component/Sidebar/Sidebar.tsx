@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./Sidebar.module.css";
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const router = useRouter();
     const [userRole, setUserRole] = useState<string>("superadmin"); // Default fallback or state
 
     useEffect(() => {
@@ -91,6 +92,17 @@ export default function Sidebar() {
                 ))}
             </nav>
             <div className={styles.footer}>
+                <button
+                    onClick={() => {
+                        localStorage.removeItem("accessToken");
+                        localStorage.removeItem("user");
+                        router.push("/login");
+                    }}
+                    className={styles.logoutBtn}
+                >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    Logout
+                </button>
                 <div className={styles.version}>v2.4.0 Premium</div>
             </div>
         </aside>

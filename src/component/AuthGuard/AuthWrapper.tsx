@@ -29,15 +29,22 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
         }
 
         if (token && userStr) {
-            const user = JSON.parse(userStr);
-            const allowedRoles = routePermissions[pathname];
-            
-            if (allowedRoles && !allowedRoles.includes(user.role)) {
-                console.warn(`Unauthorized access attempt to ${pathname} by ${user.role}`);
-                router.push("/");
-                return;
+            try {
+                const user = JSON.parse(userStr);
+                const allowedRoles = routePermissions[pathname];
+                
+                if (allowedRoles && !allowedRoles.includes(user.role)) {
+                    console.warn(`Unauthorized access attempt to ${pathname} by ${user.role}`);
+                    router.push("/");
+                    return;
+                }
+                setIsAuthenticated(true);
+            } catch (error) {
+                console.error("Failed to parse user data from localStorage:", error);
+                localStorage.removeItem("accessToken");
+                localStorage.removeItem("user");
+                router.push("/login");
             }
-            setIsAuthenticated(true);
         } else if (pathname === "/login") {
             setIsAuthenticated(false);
         } else {
