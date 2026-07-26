@@ -25,6 +25,9 @@ export default function OperatorsPage() {
     const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
     const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
     const [error, setError] = useState("");
+    const [user, setUser] = useState<any>(null);
+    const [companies, setCompanies] = useState<any[]>([]);
+    const [selectedCompanyId, setSelectedCompanyId] = useState("");
 
     // Form states
     const [formData, setFormData] = useState({
@@ -57,6 +60,23 @@ export default function OperatorsPage() {
     };
 
     useEffect(() => {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+            try {
+                const userData = JSON.parse(userStr);
+                setUser(userData);
+                
+                if (userData.role === "superadmin") {
+                    fetchAPI("/companies/list")
+                        .then(res => {
+                            setCompanies(res.companies || []);
+                        })
+                        .catch(err => console.error("Failed to load companies:", err));
+                }
+            } catch (e) {
+                console.error("Failed to parse user session");
+            }
+        }
         fetchOperators();
     }, []);
 
@@ -64,11 +84,23 @@ export default function OperatorsPage() {
         e.preventDefault();
         setError("");
         try {
-            // We need to get the company ID from the logged-in user
             const userStr = localStorage.getItem("user");
             if (!userStr) throw new Error("User session not found");
-            const user = JSON.parse(userStr);
-            const companyId = user.company;
+            const userData = JSON.parse(userStr);
+            
+            let companyId = "";
+            if (userData.role === "superadmin") {
+                if (!selectedCompanyId) {
+                    throw new Error("Please select a company for the operator");
+                }
+                companyId = selectedCompanyId;
+            } else {
+                companyId = typeof userData.company === "object" ? userData.company?._id : userData.company;
+            }
+
+            if (!companyId) {
+                throw new Error("Company ID is required for operators");
+            }
 
             await fetchAPI("/register", {
                 method: "POST",
@@ -80,6 +112,7 @@ export default function OperatorsPage() {
             });
             setIsModalOpen(false);
             setFormData({ name: "", email: "", password: "", phoneNumber: "", operatorType: "trip_operator" });
+            setSelectedCompanyId("");
             fetchOperators();
         } catch (err: any) {
             setError(err.message || "Failed to register operator");
@@ -246,6 +279,22 @@ export default function OperatorsPage() {
                             <option value="company_manager">Company Manager</option>
                         </select>
                     </div>
+                    {user?.role === "superadmin" && (
+                        <div className="form-group">
+                            <label>Company</label>
+                            <select
+                                className="form-input"
+                                value={selectedCompanyId}
+                                onChange={(e) => setSelectedCompanyId(e.target.value)}
+                                required
+                            >
+                                <option value="">Select a Company</option>
+                                {companies.map((c: any) => (
+                                    <option key={c._id} value={c._id}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                     {error && <p className="error-text">{error}</p>}
                     <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '16px' }}>
                         Register Operator

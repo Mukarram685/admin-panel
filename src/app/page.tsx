@@ -21,6 +21,20 @@ export default function Home() {
   const [passengers, setPassengers] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingPassengers, setLoadingPassengers] = useState(false);
+  const [companies, setCompanies] = useState<any[]>([]);
+
+  const handleApproveCompany = async (id: string, action: "approve" | "reject") => {
+    if (!confirm(`Are you sure you want to ${action} this company?`)) return;
+    try {
+      await fetchAPI(`/companies/approve/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({ action }),
+      });
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message || "Failed to update company status");
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -46,7 +60,7 @@ export default function Home() {
         } else if (userData.role === "superadmin") {
           const [bookingsRes, busesRes, routesRes, companiesRes] = await Promise.all([
             fetchAPI("/bookings/company/all").catch(() => ({ bookings: [] })),
-            fetchAPI("/buses/allRoutes").catch(() => ({ buses: [] })),
+            fetchAPI("/buses/company").catch(() => ({ buses: [] })),
             fetchAPI("/routes/allRoutes").catch(() => ({ routes: [] })),
             fetchAPI("/companies/list").catch(() => ({ companies: [] })),
           ]);
@@ -67,11 +81,12 @@ export default function Home() {
             buses: busesList.length,
             routes: routesList.length,
           });
+          setCompanies(companiesList);
         } else {
           // Company Admin
           const [bookingsRes, busesRes, routesRes] = await Promise.all([
             fetchAPI("/bookings/company/all").catch(() => ({ bookings: [] })),
-            fetchAPI("/buses/allRoutes").catch(() => ({ buses: [] })),
+            fetchAPI("/buses/company").catch(() => ({ buses: [] })),
             fetchAPI("/routes/allRoutes").catch(() => ({ routes: [] })),
           ]);
 
@@ -221,7 +236,80 @@ export default function Home() {
             />
           </div>
 
-          {user?.role === 'operator' ? (
+          {user?.role === "superadmin" ? (
+            <div className={styles.superadminContent}>
+              <section className={styles.tableSection}>
+                <h2>Pending Company Registrations</h2>
+                <div className="table-responsive">
+                  {companies.filter(c => c.status === 'pending').length === 0 ? (
+                    <p className={styles.noRequests}>No pending registration requests.</p>
+                  ) : (
+                    <table className={styles.customTable}>
+                      <thead>
+                        <tr>
+                          <th>Company Name</th>
+                          <th>Email</th>
+                          <th>Phone</th>
+                          <th>Address</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {companies.filter(c => c.status === 'pending').map((company) => (
+                          <tr key={company._id}>
+                            <td><strong>{company.name}</strong></td>
+                            <td>{company.email}</td>
+                            <td>{company.phone}</td>
+                            <td>{company.address}</td>
+                            <td>
+                              <div className={styles.actions}>
+                                <button className="btn-primary btn-sm" onClick={() => handleApproveCompany(company._id, "approve")}>Approve</button>
+                                <button className="btn-secondary btn-sm" onClick={() => handleApproveCompany(company._id, "reject")}>Reject</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </section>
+
+              <section className={styles.tableSection}>
+                <h2>Registered Transport Companies</h2>
+                <div className="table-responsive">
+                  {companies.filter(c => c.status === 'approved').length === 0 ? (
+                    <p className={styles.noRequests}>No active companies registered.</p>
+                  ) : (
+                    <table className={styles.customTable}>
+                      <thead>
+                        <tr>
+                          <th>Company Name</th>
+                          <th>Email</th>
+                          <th>Phone</th>
+                          <th>Address</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {companies.filter(c => c.status === 'approved').map((company) => (
+                          <tr key={company._id}>
+                            <td><strong>{company.name}</strong></td>
+                            <td>{company.email}</td>
+                            <td>{company.phone}</td>
+                            <td>{company.address}</td>
+                            <td>
+                              <span className="badge badge-success" style={{ textTransform: 'capitalize' }}>Approved</span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </section>
+            </div>
+          ) : user?.role === 'operator' ? (
             <div className={styles.operatorContent}>
               <DataTable 
                 title="Your Assigned Tasks" 
@@ -233,11 +321,9 @@ export default function Home() {
           ) : (
             <div className={`glass glass-card ${styles.summaryBox}`}>
                   <div className={styles.summaryContent}>
-                      <h3>{user?.role === "superadmin" ? "System Integrity Report" : "Operational Performance Notice"}</h3>
+                      <h3>Operational Performance Notice</h3>
                       <p>
-                        {user?.role === "superadmin" ? 
-                         "Global system data is aggregated in real-time. Platform-wide metrics include all approved companies and their active schedules." : 
-                         "Detailed passenger and operator information is restricted to protect privacy. Only consolidated volumes and financial metrics are displayed on this dashboard."}
+                        Detailed passenger and operator information is restricted to protect privacy. Only consolidated volumes and financial metrics are displayed on this dashboard.
                       </p>
                   </div>
             </div>
