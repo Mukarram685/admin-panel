@@ -1,4 +1,4 @@
-const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'https://backend-fyp-kappa.vercel.app/api/v1').replace(/\/+$/, '');
+const BASE_URL = (process.env.NEXT_PUBLIC_API_URL).replace(/\/+$/, '');
 
 export async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     let token = '';
