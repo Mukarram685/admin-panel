@@ -7,10 +7,15 @@ import Modal from "@/component/Modal/Modal";
 export default function SchedulesPage() {
     const [schedules, setSchedules] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<any>(null);
     const [availableRoutes, setAvailableRoutes] = useState<any[]>([]);
     const [availableBuses, setAvailableBuses] = useState<any[]>([]);
     const [availableOperators, setAvailableOperators] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+    const [selectedSchedule, setSelectedSchedule] = useState<any>(null);
+    const [passengers, setPassengers] = useState<any[]>([]);
+    const [loadingPassengers, setLoadingPassengers] = useState(false);
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState("");
 
@@ -24,11 +29,24 @@ export default function SchedulesPage() {
         fare: 500
     });
 
+    useEffect(() => {
+        const userStr = localStorage.getItem("user");
+        if (userStr) setUser(JSON.parse(userStr));
+    }, []);
+
     const loadSchedules = async () => {
         try {
             setLoading(true);
-            const res = await fetchAPI("/schedules/company");
-            setSchedules(res.data || res.schedules || []);
+            const userStr = localStorage.getItem("user");
+            const userData = userStr ? JSON.parse(userStr) : null;
+            
+            let res;
+            if (userData?.role === 'operator') {
+                res = await fetchAPI("/operator/my-trips");
+            } else {
+                res = await fetchAPI("/schedules/company");
+            }
+            setSchedules(res.trips || res.data || res.schedules || []);
         } catch (err: any) {
             console.error(err);
         } finally {
@@ -37,32 +55,27 @@ export default function SchedulesPage() {
     };
 
     const loadDropdowns = async () => {
+        if (user?.role === 'operator') return; // Operators don't need dropdowns for creation
         try {
             const [routesRes, busesRes, operatorsRes] = await Promise.all([
                 fetchAPI("/routes/allRoutes"),
                 fetchAPI("/buses/company"),
                 fetchAPI("/operator/company")
             ]);
-            const rts = routesRes.data || routesRes.routes || [];
-            const bss = busesRes.buses || busesRes.data || [];
-            const ops = operatorsRes.operators || operatorsRes.data || [];
-            
-            setAvailableRoutes(rts);
-            setAvailableBuses(bss);
-            setAvailableOperators(ops);
-
-            if (rts.length > 0 && !formData.routeId) setFormData(prev => ({ ...prev, routeId: rts[0]._id }));
-            if (bss.length > 0 && !formData.busId) setFormData(prev => ({ ...prev, busId: bss[0]._id }));
-            if (ops.length > 0 && !formData.operatorId) setFormData(prev => ({ ...prev, operatorId: ops[0]._id }));
+            setAvailableRoutes(routesRes.data || routesRes.routes || []);
+            setAvailableBuses(busesRes.buses || busesRes.data || []);
+            setAvailableOperators(operatorsRes.operators || operatorsRes.data || []);
         } catch (err) {
             console.error("Failed to load reference data", err);
         }
     };
 
     useEffect(() => {
-        loadSchedules();
-        loadDropdowns();
-    }, []);
+        if (user) {
+            loadSchedules();
+            if (user.role !== 'operator') loadDropdowns();
+        }
+    }, [user]);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -82,54 +95,107 @@ export default function SchedulesPage() {
         }
     };
 
+    const handleViewDetails = async (schedule: any) => {
+        setSelectedSchedule(schedule);
+        setIsDetailModalOpen(true);
+        setLoadingPassengers(true);
+        try {
+            const res = await fetchAPI(`/bookings/schedule/${schedule._id}`);
+            // Group seats by passenger details WITHIN each individual booking
+            const processedList = (res.bookings || []).flatMap((b: any) => {
+                const groups: Record<string, any> = {};
+                (b.seats || []).forEach((s: any) => {
+                    const key = `${s.passengerName}-${s.passengerCNIC}`;
+                    if (!groups[key]) {
+                        groups[key] = { 
+                            ...s, 
+                            pnr: b.pnr, 
+                            bookedBy: b.passenger?.name || 'Guest',
+                            seatList: [s.seatNumber] 
+                        };
+                    } else {
+                        groups[key].seatList.push(s.seatNumber);
+                    }
+                });
+                return Object.values(groups);
+            });
+            setPassengers(processedList);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoadingPassengers(false);
+        }
+    };
+
+    const handleStartTrip = async (id: string) => {
+        if (!confirm("Are you sure you want to start this trip?")) return;
+        try {
+            await fetchAPI(`/operator/trips/${id}/start`, { method: "PATCH" });
+            setSchedules((prev: any) => prev.map((s: any) => s._id === id ? { ...s, status: 'in-progress' } : s));
+            if (selectedSchedule?._id === id) setSelectedSchedule((prev: any) => ({ ...prev, status: 'in-progress' }));
+        } catch (err: any) {
+            alert(err.message);
+        }
+    };
+
+    const handleCompleteTrip = async (id: string) => {
+        if (!confirm("Are you sure you want to mark this trip as completed?")) return;
+        try {
+            await fetchAPI(`/operator/trips/${id}/complete`, { method: "PATCH" });
+            setSchedules((prev: any) => prev.map((s: any) => s._id === id ? { ...s, status: 'completed' } : s));
+            if (selectedSchedule?._id === id) setSelectedSchedule((prev: any) => ({ ...prev, status: 'completed' }));
+        } catch (err: any) {
+            alert(err.message);
+        }
+    };
+
     const columns = [
         {
             key: "route", header: "Route", render: (r: any) => (
-                r.route ? (
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontWeight: 600 }}>{r.route.fromCity} → {r.route.toCity}</span>
-                        <span style={{ fontSize: '12px', color: '#64748b' }}>{r.route.from} to {r.route.to}</span>
-                    </div>
-                ) : "N/A"
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontWeight: 600 }}>{r.route?.fromCity} → {r.route?.toCity}</span>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>{r.route?.from} to {r.route?.to}</span>
+                </div>
             )
         },
-        { key: "bus", header: "Bus", render: (r: any) => r.bus ? `${r.bus.busNumber} (${r.bus.type})` : "N/A" },
+        { key: "bus", header: "Bus", render: (r: any) => `${r.bus?.busNumber} (${r.bus?.type})` },
         { 
-            key: "operator", 
-            header: "Operator", 
-            render: (r: any) => {
-                if (!r.operator) return <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>Unassigned</span>;
-                
-                // Handle populated object
-                if (typeof r.operator === 'object' && r.operator.name) {
+            key: "operator", header: "Operator", render: (r: any) => {
+                if (r.operator && typeof r.operator === 'object') {
                     return (
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontWeight: 600 }}>{r.operator.name}</span>
+                            <span style={{ fontWeight: 600, color: '#f8fafc' }}>{r.operator.name}</span>
                             <span style={{ fontSize: '11px', color: '#64748b' }}>{r.operator.email}</span>
                         </div>
                     );
                 }
-                
-                // Handle case where it's just an ID (not populated)
-                return <span style={{ fontSize: '12px', color: '#94a3b8' }}>ID: {String(r.operator).substring(0, 8)}...</span>;
+                return <span style={{ fontSize: '12px', color: '#94a3b8' }}>{r.operator ? `ID: ${String(r.operator).substring(0, 8)}...` : 'N/A'}</span>;
             }
         },
-        { key: "departureDate", header: "Date", render: (r: any) => new Date(r.departureDate).toLocaleDateString(undefined, { dateStyle: 'medium' }) },
-        { 
-            key: "time", header: "Time", render: (r: any) => (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ color: '#f8fafc' }}>{r.departureTime}</span>
-                    <span style={{ color: '#475569' }}>→</span>
-                    <span style={{ color: '#94a3b8' }}>{r.arrivalTime}</span>
-                </div>
-            )
-        },
-        { key: "fare", header: "Fare", render: (r: any) => <span style={{ fontWeight: 700, color: '#10b981' }}>Rs {r.fare}</span> },
+        { key: "departureDate", header: "Date", render: (r: any) => new Date(r.departureDate).toLocaleDateString() },
+        { key: "time", header: "Time", render: (r: any) => `${r.departureTime} - ${r.arrivalTime}` },
         {
             key: "status", header: "Status", render: (r: any) => (
-                <span className={`status-badge ${r.status || 'scheduled'}`}>
-                    {r.status || 'Scheduled'}
+                <span className={`status-badge ${r.status || 'active'}`}>
+                    {r.status || 'Active'}
                 </span>
+            )
+        },
+        {
+            key: "actions", header: "Actions", render: (r: any) => (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => handleViewDetails(r)} className="btn-secondary btn-sm">Manifest</button>
+                    {user?.role === 'operator' && (
+                        <>
+                            {r.status === 'active' && (
+                                <button onClick={() => handleStartTrip(r._id)} className="btn-primary btn-sm">Start</button>
+                            )}
+                            {r.status === 'in-progress' && (
+                                <button onClick={() => handleCompleteTrip(r._id)} className="btn-primary btn-sm">Complete</button>
+                            )}
+                        </>
+                    )}
+                </div>
             )
         }
     ];
@@ -138,16 +204,20 @@ export default function SchedulesPage() {
         <main className="page-container">
             <header className="page-header">
                 <div>
-                    <h1 className="page-title">Schedules Management</h1>
-                    <p className="page-subtitle">Coordinate bus departures and manage route timings.</p>
+                    <h1 className="page-title">{user?.role === 'operator' ? "My Assigned Schedules" : "Schedules Management"}</h1>
+                    <p className="page-subtitle">
+                        {user?.role === 'operator' ? "View your duty manifest and update trip status." : "Coordinate bus departures and manage route timings."}
+                    </p>
                 </div>
-                <button onClick={() => setIsModalOpen(true)} className="btn-primary">
-                    + Create Schedule
-                </button>
+                {user?.role !== 'operator' && (
+                    <button onClick={() => setIsModalOpen(true)} className="btn-primary">
+                        + Create Schedule
+                    </button>
+                )}
             </header>
 
             <DataTable 
-                title="Upcoming Departures" 
+                title={user?.role === 'operator' ? "Current Assignments" : "Upcoming Departures"} 
                 columns={columns} 
                 data={schedules} 
                 loading={loading} 
@@ -165,7 +235,7 @@ export default function SchedulesPage() {
                         <label>Select Route</label>
                         <select required className="form-input" value={formData.routeId} onChange={e => setFormData({ ...formData, routeId: e.target.value })}>
                             <option value="" disabled>Choose a route...</option>
-                            {availableRoutes.map(r => <option key={r._id} value={r._id}>{r.fromCity} -&gt; {r.toCity} ({r.distance}km)</option>)}
+                            {availableRoutes.map(r => <option key={r._id} value={r._id}>{r.fromCity} → {r.toCity} ({r.distance}km)</option>)}
                         </select>
                     </div>
 
@@ -216,28 +286,129 @@ export default function SchedulesPage() {
                 </form>
             </Modal>
 
+            {/* Detail Modal (Manifest) */}
+            <Modal 
+                isOpen={isDetailModalOpen} 
+                onClose={() => setIsDetailModalOpen(false)} 
+                title={`Passenger Manifest - ${selectedSchedule?.bus?.busNumber}`}
+                width="800px"
+            >
+                <div className="manifest-container">
+                    <div className="manifest-header">
+                        <div className="m-info">
+                            <span className="m-label">Route</span>
+                            <span className="m-value">{selectedSchedule?.route?.fromCity} to {selectedSchedule?.route?.toCity}</span>
+                        </div>
+                        <div className="m-info">
+                            <span className="m-label">Departure</span>
+                            <span className="m-value">{selectedSchedule?.departureTime} | {new Date(selectedSchedule?.departureDate).toLocaleDateString()}</span>
+                        </div>
+                        <div className="m-info">
+                            <span className="m-label">Status</span>
+                            <span className={`status-badge ${selectedSchedule?.status}`}>{selectedSchedule?.status}</span>
+                        </div>
+                    </div>
+
+                    <div className="p-list">
+                        <h3 className="section-title">Booked Passengers</h3>
+                        {loadingPassengers ? (
+                            <p className="loading-text">Loading passenger logs...</p>
+                        ) : passengers.length === 0 ? (
+                            <p className="empty-text">No bookings found for this trip.</p>
+                        ) : (
+                            <table className="p-table">
+                                <thead>
+                                    <tr>
+                                        <th>Seat</th>
+                                        <th>Passenger Name</th>
+                                        <th>CNIC / ID</th>
+                                        <th>Phone</th>
+                                        <th>Gender</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {passengers.map((p, idx) => (
+                                        <tr key={idx}>
+                                            <td><span className="seat-num">{p.seatList.join(', ')}</span></td>
+                                            <td className="p-name">{p.passengerName}</td>
+                                            <td className="p-cnic">{p.passengerCNIC}</td>
+                                            <td>{p.passengerPhone}</td>
+                                            <td>{p.gender}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
+
+                    {user?.role === 'operator' && (
+                        <div className="manifest-actions">
+                            {selectedSchedule?.status === 'active' && (
+                                <button 
+                                    onClick={() => handleStartTrip(selectedSchedule._id)} 
+                                    className="btn-primary w-full"
+                                    style={{ marginTop: '24px' }}
+                                >
+                                    Start Trip Now
+                                </button>
+                            )}
+                            {selectedSchedule?.status === 'in-progress' && (
+                                <button 
+                                    onClick={() => handleCompleteTrip(selectedSchedule._id)} 
+                                    className="btn-primary w-full"
+                                    style={{ marginTop: '24px' }}
+                                >
+                                    Mark Trip as Completed
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </Modal>
+
             <style jsx>{`
                 .page-container { padding: 32px; }
                 .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
-                .page-title { font-size: 32px; font-weight: 800; margin: 0; color: #f8fafc; letter-spacing: -0.025em; }
+                .page-title { font-size: 32px; font-weight: 800; margin: 0; color: #f8fafc; }
                 .page-subtitle { color: #94a3b8; margin: 4px 0 0 0; font-size: 15px; }
-                
+
                 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
                 .form-group { margin-bottom: 20px; }
                 .form-group label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-                .form-input { width: 100%; padding: 12px 16px; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--card-border); border-radius: 12px; color: white; outline: none; transition: all 0.2s; }
+                .form-input { width: 100%; padding: 12px 16px; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: white; outline: none; transition: all 0.2s; }
                 .form-input:focus { border-color: var(--primary); background: rgba(0, 0, 0, 0.3); }
                 
                 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; }
-                .btn-secondary { background: transparent; border: 1px solid var(--card-border); color: #94a3b8; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+                .btn-secondary { background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); color: #94a3b8; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
                 .btn-secondary:hover { background: rgba(255, 255, 255, 0.05); color: white; }
                 
                 .error-text { background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 12px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; border: 1px solid rgba(239, 68, 68, 0.2); }
                 
-                .status-badge { padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
-                .status-badge.scheduled { background: rgba(79, 70, 229, 0.1); color: #818cf8; }
+                .manifest-header { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(255, 255, 255, 0.05); }
+                .m-info { display: flex; flex-direction: column; gap: 4px; }
+                .m-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+                .m-value { font-size: 15px; color: #f8fafc; font-weight: 600; }
+                
+                .section-title { font-size: 14px; font-weight: 700; color: #f8fafc; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; border-left: 3px solid var(--primary); padding-left: 12px; }
+                
+                .p-table { width: 100%; border-collapse: collapse; }
+                .p-table th { text-align: left; padding: 12px; font-size: 12px; color: #64748b; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+                .p-table td { padding: 16px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.02); font-size: 14px; color: #cbd5e1; }
+                
+                .seat-num { background: rgba(59, 130, 246, 0.1); color: #60a5fa; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-family: monospace; }
+                .p-name { color: #f8fafc; font-weight: 600; }
+                .p-cnic { font-family: monospace; color: #94a3b8; }
+                
+                .status-badge { padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; width: fit-content; }
+                .status-badge.active { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+                .status-badge.in-progress { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
                 .status-badge.completed { background: rgba(16, 185, 129, 0.1); color: #10b981; }
                 .status-badge.cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+                
+                .loading-text { color: #94a3b8; text-align: center; padding: 40px; font-style: italic; }
+                .empty-text { color: #64748b; text-align: center; padding: 40px; }
+                
+                .w-full { width: 100%; }
             `}</style>
         </main>
     );
