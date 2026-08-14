@@ -19,11 +19,16 @@ export default function SchedulesPage() {
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState("");
 
+    const getTodayDate = () => {
+        const today = new Date();
+        return today.toISOString().split('T')[0];
+    };
+
     const [formData, setFormData] = useState({
         routeId: "",
         busId: "",
         operatorId: "",
-        departureDate: "",
+        departureDate: getTodayDate(),
         departureTime: "08:00",
         arrivalTime: "12:00",
         fare: 500
@@ -258,7 +263,16 @@ export default function SchedulesPage() {
                     <div className="form-grid">
                         <div className="form-group">
                             <label>Departure Date</label>
-                            <input type="date" required className="form-input" value={formData.departureDate} onChange={e => setFormData({ ...formData, departureDate: e.target.value })} />
+                            <input 
+                                type="date" 
+                                required 
+                                min={getTodayDate()}
+                                className="form-input date-picker" 
+                                value={formData.departureDate} 
+                                onClick={(e) => e.currentTarget.showPicker?.()}
+                                onFocus={(e) => e.currentTarget.showPicker?.()}
+                                onChange={e => setFormData({ ...formData, departureDate: e.target.value })} 
+                            />
                         </div>
                         <div className="form-group">
                             <label>Fare (Rs)</label>
@@ -269,11 +283,27 @@ export default function SchedulesPage() {
                     <div className="form-grid">
                         <div className="form-group">
                             <label>Departure Time</label>
-                            <input type="time" required className="form-input" value={formData.departureTime} onChange={e => setFormData({ ...formData, departureTime: e.target.value })} />
+                            <input 
+                                type="time" 
+                                required 
+                                className="form-input time-picker" 
+                                value={formData.departureTime} 
+                                onClick={(e) => e.currentTarget.showPicker?.()}
+                                onFocus={(e) => e.currentTarget.showPicker?.()}
+                                onChange={e => setFormData({ ...formData, departureTime: e.target.value })} 
+                            />
                         </div>
                         <div className="form-group">
                             <label>Arrival Time</label>
-                            <input type="time" required className="form-input" value={formData.arrivalTime} onChange={e => setFormData({ ...formData, arrivalTime: e.target.value })} />
+                            <input 
+                                type="time" 
+                                required 
+                                className="form-input time-picker" 
+                                value={formData.arrivalTime} 
+                                onClick={(e) => e.currentTarget.showPicker?.()}
+                                onFocus={(e) => e.currentTarget.showPicker?.()}
+                                onChange={e => setFormData({ ...formData, arrivalTime: e.target.value })} 
+                            />
                         </div>
                     </div>
 
@@ -377,6 +407,9 @@ export default function SchedulesPage() {
                 .form-group label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
                 .form-input { width: 100%; padding: 12px 16px; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: white; outline: none; transition: all 0.2s; }
                 .form-input:focus { border-color: var(--primary); background: rgba(0, 0, 0, 0.3); }
+                .form-input[type="date"], .form-input[type="time"] { color-scheme: dark; color: #f8fafc; font-family: inherit; }
+                .form-input::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.8; }
+                .form-input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
                 
                 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; }
                 .btn-secondary { background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); color: #94a3b8; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
