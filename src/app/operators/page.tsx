@@ -59,6 +59,19 @@ export default function OperatorsPage() {
         }
     };
 
+    const getCompanyId = (u: any) => {
+        if (!u || !u.company) return "";
+        if (typeof u.company === "object" && u.company !== null) {
+            return u.company._id || u.company.id || "";
+        }
+        return typeof u.company === "string" ? u.company : "";
+    };
+
+    const openAddOperatorModal = () => {
+        setError("");
+        setIsModalOpen(true);
+    };
+
     useEffect(() => {
         const userStr = localStorage.getItem("user");
         if (userStr) {
@@ -66,6 +79,7 @@ export default function OperatorsPage() {
                 const userData = JSON.parse(userStr);
                 setUser(userData);
                 
+                // SECURITY: ONLY Superadmin loads the full company list
                 if (userData.role === "superadmin") {
                     fetchAPI("/companies/list")
                         .then(res => {
@@ -95,11 +109,11 @@ export default function OperatorsPage() {
                 }
                 companyId = selectedCompanyId;
             } else {
-                companyId = typeof userData.company === "object" ? userData.company?._id : userData.company;
+                companyId = getCompanyId(userData);
             }
 
             if (!companyId) {
-                throw new Error("Company ID is required for operators");
+                throw new Error("Your user account is not associated with any company. Please contact Superadmin.");
             }
 
             await fetchAPI("/register", {
@@ -112,7 +126,7 @@ export default function OperatorsPage() {
             });
             setIsModalOpen(false);
             setFormData({ name: "", email: "", password: "", phoneNumber: "", operatorType: "trip_operator" });
-            setSelectedCompanyId("");
+            if (userData.role === "superadmin") setSelectedCompanyId("");
             fetchOperators();
         } catch (err: any) {
             setError(err.message || "Failed to register operator");
@@ -213,7 +227,7 @@ export default function OperatorsPage() {
                 data={operators}
                 loading={loading}
                 actionButton={
-                    <button onClick={() => setIsModalOpen(true)} className="btn-primary">
+                    <button onClick={openAddOperatorModal} className="btn-primary">
                         Add New Operator
                     </button>
                 }

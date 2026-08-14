@@ -28,7 +28,7 @@ export default function Companies() {
     const handleAction = async (id: string, action: "approve" | "reject") => {
         if (!confirm(`Are you sure you want to ${action} this company?`)) return;
         try {
-            await fetchAPI(`/company/approve/${id}`, {
+            await fetchAPI(`/companies/approve/${id}`, {
                 method: "PUT",
                 body: JSON.stringify({ action }),
             });
