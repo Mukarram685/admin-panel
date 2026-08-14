@@ -13,6 +13,10 @@ export default function BusesPage() {
     const [selectedBus, setSelectedBus] = useState<any>(null);
     const [error, setError] = useState("");
 
+    const [user, setUser] = useState<any>(null);
+    const [companies, setCompanies] = useState<any[]>([]);
+    const [selectedCompanyId, setSelectedCompanyId] = useState("");
+
     const [formData, setFormData] = useState({
         busNumber: "",
         registrationNumber: "",
@@ -34,6 +38,20 @@ export default function BusesPage() {
     };
 
     useEffect(() => {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+            try {
+                const userData = JSON.parse(userStr);
+                setUser(userData);
+                if (userData.role === "superadmin") {
+                    fetchAPI("/companies/list")
+                        .then(res => setCompanies(res.companies || []))
+                        .catch(err => console.error(err));
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
         loadBuses();
     }, []);
 
@@ -41,9 +59,17 @@ export default function BusesPage() {
         e.preventDefault();
         setError("");
         try {
+            let companyId = selectedCompanyId;
+            if (!companyId && user?.company) {
+                companyId = typeof user.company === "object" ? (user.company._id || user.company.id) : user.company;
+            }
+
             const bodyData = {
                 ...formData,
-                amenities: formData.amenities.split(',').map(s => s.trim()).filter(Boolean)
+                amenities: typeof formData.amenities === "string"
+                    ? formData.amenities.split(',').map(s => s.trim()).filter(Boolean)
+                    : formData.amenities,
+                ...(companyId ? { company: companyId } : {})
             };
             
             const endpoint = selectedBus ? `/buses/${selectedBus._id}` : "/buses/add";
@@ -58,6 +84,7 @@ export default function BusesPage() {
             setIsUpdateModalOpen(false);
             setFormData({ busNumber: "", registrationNumber: "", type: "AC", totalSeats: 40, amenities: "" });
             setSelectedBus(null);
+            if (user?.role === "superadmin") setSelectedCompanyId("");
             loadBuses();
         } catch (err: any) {
             setError(err.message || "Operation failed");
@@ -167,6 +194,23 @@ export default function BusesPage() {
                         <label>Amenities (comma separated)</label>
                         <input type="text" className="form-input" value={formData.amenities} onChange={e => setFormData({ ...formData, amenities: e.target.value })} placeholder="WiFi, AC, Charging Port..." />
                     </div>
+
+                    {user?.role === "superadmin" && (
+                        <div className="form-group">
+                            <label>Company</label>
+                            <select
+                                className="form-input"
+                                value={selectedCompanyId}
+                                onChange={(e) => setSelectedCompanyId(e.target.value)}
+                                required
+                            >
+                                <option value="">Select a Company</option>
+                                {companies.map((c: any) => (
+                                    <option key={c._id} value={c._id}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
 
                     <div className="modal-actions">
                         <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">Cancel</button>
