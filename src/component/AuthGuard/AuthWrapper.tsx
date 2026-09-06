@@ -17,6 +17,7 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
         "/routes": ["superadmin", "companyadmin"],
         "/schedules": ["superadmin", "companyadmin", "operator"],
         "/bookings": ["superadmin", "companyadmin"],
+        "/reports": ["superadmin", "companyadmin"],
     };
 
     useEffect(() => {
@@ -54,7 +55,12 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
 
     if (isAuthenticated === null && pathname !== "/login") {
         // Prevents UI flicker while checking authentication state
-        return <div style={{ height: "100vh", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--background)", color: "white" }}>Authenticating...</div>;
+        return (
+            <div style={{ height: "100vh", width: "100%", display: "flex", flexDirection: "column", gap: "16px", alignItems: "center", justifyContent: "center", background: "var(--background)", color: "var(--text-muted)" }}>
+                <div style={{ width: "36px", height: "36px", border: "3px solid rgba(255, 255, 255, 0.1)", borderTopColor: "var(--primary)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                <span style={{ fontSize: "13px", fontWeight: 500, letterSpacing: "0.02em" }}>Verifying session...</span>
+            </div>
+        );
     }
 
     // If on login page, just render children without sidebar/header
@@ -65,10 +71,10 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     // Render full dashboard layout
     return (
         <>
-            <Sidebar />
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", marginLeft: "var(--sidebar-width)" }}>
-                <Header />
-                <main style={{ flex: 1, padding: "32px", marginTop: "var(--header-height)", overflowY: "auto" }}>
+            <Header />
+            <div style={{ display: "flex", marginTop: "var(--header-height)", minHeight: "calc(100vh - var(--header-height))" }}>
+                <Sidebar />
+                <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto", minWidth: 0 }}>
                     {children}
                 </main>
             </div>

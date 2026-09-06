@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Check, X, CheckCircle2, Clock, AlertCircle, Building2 } from "lucide-react";
 import { fetchAPI } from "@/utils/api";
 import DataTable from "@/component/DataTable/DataTable";
 import styles from "./page.module.css";
@@ -39,15 +40,27 @@ export default function Companies() {
     };
 
     const columns = [
-        { key: "name", header: "Company Name" },
+        { 
+            key: "name", 
+            header: "Company Name",
+            render: (row: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Building2 size={15} color="var(--primary)" />
+                    <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{row.name}</span>
+                </div>
+            )
+        },
         { key: "email", header: "Email" },
         { key: "phone", header: "Phone" },
         { 
             key: "status", 
             header: "Status",
             render: (row: any) => (
-                <span className={`badge ${row.status === 'approved' ? 'badge-success' : row.status === 'pending' ? 'badge-primary' : 'badge-error'}`}>
-                    {row.status}
+                <span className={`badge ${row.status === 'approved' ? 'badge-success' : row.status === 'pending' ? 'badge-warning' : 'badge-error'}`}>
+                    {row.status === 'approved' && <CheckCircle2 size={11} />}
+                    {row.status === 'pending' && <Clock size={11} />}
+                    {row.status === 'rejected' && <AlertCircle size={11} />}
+                    <span>{row.status}</span>
                 </span>
             )
         },
@@ -55,12 +68,20 @@ export default function Companies() {
             key: "actions",
             header: "Actions",
             render: (row: any) => (
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    {row.status === "pending" && (
+                <div style={{ display: 'flex', gap: '6px' }}>
+                    {row.status === "pending" ? (
                         <>
-                            <button className="btn-primary btn-sm" onClick={() => handleAction(row._id, "approve")}>Approve</button>
-                            <button className="btn-secondary btn-sm" onClick={() => handleAction(row._id, "reject")}>Reject</button>
+                            <button className="btn-icon-success" onClick={() => handleAction(row._id, "approve")} title="Approve Registration">
+                                <Check size={13} />
+                                <span>Approve</span>
+                            </button>
+                            <button className="btn-icon-danger" onClick={() => handleAction(row._id, "reject")} title="Reject Registration">
+                                <X size={13} />
+                                <span>Reject</span>
+                            </button>
                         </>
+                    ) : (
+                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>No actions pending</span>
                     )}
                 </div>
             )
@@ -71,13 +92,13 @@ export default function Companies() {
         <main className={styles.container}>
             <header className={styles.header}>
                 <h1 className={styles.title}>Company Management</h1>
-                <p className={styles.subtitle}>Review and manage bus company partnerships.</p>
+                <p className={styles.subtitle}>Review registrations and partner transit operators across networks.</p>
                 {error && <p className={styles.error}>{error}</p>}
             </header>
 
             <div className={styles.content}>
                 <DataTable 
-                    title="Registered Companies" 
+                    title="Registered Transport Operators" 
                     columns={columns} 
                     data={companies} 
                     loading={loading}

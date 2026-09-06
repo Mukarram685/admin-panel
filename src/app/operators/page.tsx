@@ -1,5 +1,19 @@
 "use client";
 import { useEffect, useState } from "react";
+import {
+    UserPlus,
+    UserCheck,
+    Sliders,
+    CheckCircle2,
+    Clock,
+    AlertCircle,
+    User,
+    Mail,
+    Lock,
+    Phone,
+    Building2,
+    Check
+} from "lucide-react";
 import DataTable from "@/component/DataTable/DataTable";
 import Modal from "@/component/Modal/Modal";
 import { fetchAPI } from "@/utils/api";
@@ -51,7 +65,7 @@ export default function OperatorsPage() {
         try {
             setLoading(true);
             const response = await fetchAPI("/operator/company");
-            setOperators(response.operators);
+            setOperators(response.operators || []);
         } catch (err: any) {
             setError(err.message || "Failed to fetch operators");
         } finally {
@@ -175,14 +189,25 @@ export default function OperatorsPage() {
     };
 
     const columns = [
-        { key: "name", header: "Name" },
+        { 
+            key: "name", 
+            header: "Name",
+            render: (row: Operator) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a5b4fc' }}>
+                        <User size={14} />
+                    </div>
+                    <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{row.name}</span>
+                </div>
+            )
+        },
         { key: "email", header: "Email" },
         { 
             key: "operatorType", 
-            header: "Type",
+            header: "Duty Type",
             render: (row: Operator) => (
-                <span style={{ textTransform: 'capitalize' }}>
-                    {row.operatorType?.replace('_', ' ') || 'N/A'}
+                <span className="badge badge-info" style={{ textTransform: 'capitalize' }}>
+                    {row.operatorType?.replace('_', ' ') || 'Trip Operator'}
                 </span>
             )
         },
@@ -190,8 +215,11 @@ export default function OperatorsPage() {
             key: "status", 
             header: "Status",
             render: (row: Operator) => (
-                <span className={`status-badge ${row.status}`}>
-                    {row.status}
+                <span className={`badge ${row.status === 'approved' ? 'badge-success' : row.status === 'pending' ? 'badge-warning' : 'badge-error'}`}>
+                    {row.status === 'approved' && <CheckCircle2 size={11} />}
+                    {row.status === 'pending' && <Clock size={11} />}
+                    {row.status === 'rejected' && <AlertCircle size={11} />}
+                    <span>{row.status}</span>
                 </span>
             )
         },
@@ -199,20 +227,24 @@ export default function OperatorsPage() {
             key: "actions",
             header: "Actions",
             render: (row: Operator) => (
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
                     {row.status === "pending" && (
                         <button 
                             onClick={() => handleStatusUpdate(row._id, "approve")}
-                            className="btn-success-sm"
+                            className="btn-icon-success"
+                            title="Approve Staff"
                         >
-                            Approve
+                            <Check size={13} />
+                            <span>Approve</span>
                         </button>
                     )}
                     <button 
                         onClick={() => openScopeModal(row)}
-                        className="btn-primary-sm"
+                        className="btn-icon-primary"
+                        title="Manage Scope"
                     >
-                        Manage Scope
+                        <Sliders size={13} />
+                        <span>Scope</span>
                     </button>
                 </div>
             )
@@ -221,16 +253,22 @@ export default function OperatorsPage() {
 
     return (
         <main className="page-container">
+            <header className="page-header">
+                <div>
+                    <h1 className="page-title">Operator Staff Directory</h1>
+                    <p className="page-subtitle">Manage driver assignments, city managers, and crew credentials.</p>
+                </div>
+                <button onClick={openAddOperatorModal} className="btn-primary">
+                    <UserPlus size={15} />
+                    <span>Register New Operator</span>
+                </button>
+            </header>
+
             <DataTable
-                title="Company Operators"
+                title="Active Personnel"
                 columns={columns}
                 data={operators}
                 loading={loading}
-                actionButton={
-                    <button onClick={openAddOperatorModal} className="btn-primary">
-                        Add New Operator
-                    </button>
-                }
             />
 
             {/* Registration Modal */}
@@ -241,37 +279,40 @@ export default function OperatorsPage() {
             >
                 <form onSubmit={handleRegister}>
                     <div className="form-group">
-                        <label>Full Name</label>
+                        <label className="form-label">Full Name</label>
                         <input
                             type="text"
                             required
                             className="form-input"
+                            placeholder="John Doe"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         />
                     </div>
                     <div className="form-group">
-                        <label>Email Address</label>
+                        <label className="form-label">Email Address</label>
                         <input
                             type="email"
                             required
                             className="form-input"
+                            placeholder="operator@domain.com"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         />
                     </div>
                     <div className="form-group">
-                        <label>Password</label>
+                        <label className="form-label">Password</label>
                         <input
                             type="password"
                             required
                             className="form-input"
+                            placeholder="••••••••"
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         />
                     </div>
                     <div className="form-group">
-                        <label>Phone Number</label>
+                        <label className="form-label">Phone Number</label>
                         <input
                             type="text"
                             required
@@ -282,22 +323,22 @@ export default function OperatorsPage() {
                         />
                     </div>
                     <div className="form-group">
-                        <label>Operator Type</label>
+                        <label className="form-label">Operator Type</label>
                         <select
-                            className="form-input"
+                            className="form-select"
                             value={formData.operatorType}
                             onChange={(e) => setFormData({ ...formData, operatorType: e.target.value })}
                         >
-                            <option value="trip_operator">Trip Operator</option>
-                            <option value="city_manager">City Manager</option>
-                            <option value="company_manager">Company Manager</option>
+                            <option value="trip_operator">Trip Operator (Conductor/Driver)</option>
+                            <option value="city_manager">City Terminal Manager</option>
+                            <option value="company_manager">Company Dispatch Manager</option>
                         </select>
                     </div>
                     {user?.role === "superadmin" && (
                         <div className="form-group">
-                            <label>Company</label>
+                            <label className="form-label">Company Affiliation</label>
                             <select
-                                className="form-input"
+                                className="form-select"
                                 value={selectedCompanyId}
                                 onChange={(e) => setSelectedCompanyId(e.target.value)}
                                 required
@@ -309,10 +350,14 @@ export default function OperatorsPage() {
                             </select>
                         </div>
                     )}
-                    {error && <p className="error-text">{error}</p>}
-                    <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '16px' }}>
-                        Register Operator
-                    </button>
+                    {error && <div className="error-text">{error}</div>}
+                    <div className="modal-actions">
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">Cancel</button>
+                        <button type="submit" className="btn-primary">
+                            <UserPlus size={15} />
+                            <span>Register Operator</span>
+                        </button>
+                    </div>
                 </form>
             </Modal>
 
@@ -320,98 +365,75 @@ export default function OperatorsPage() {
             <Modal
                 isOpen={isScopeModalOpen}
                 onClose={() => setIsScopeModalOpen(false)}
-                title={`Manage Scope: ${selectedOperator?.name}`}
+                title={`Manage Staff Scope: ${selectedOperator?.name}`}
             >
                 <form onSubmit={handleScopeUpdate}>
                     <div className="form-group">
-                        <label>Operator Type</label>
+                        <label className="form-label">Assigned Duty Designation</label>
                         <select
-                            className="form-input"
+                            className="form-select"
                             value={scopeData.operatorType}
                             onChange={(e) => setScopeData({ ...scopeData, operatorType: e.target.value })}
                         >
                             <option value="trip_operator">Trip Operator</option>
-                            <option value="city_manager">City Manager</option>
-                            <option value="company_manager">Company Manager</option>
+                            <option value="city_manager">City Terminal Manager</option>
+                            <option value="company_manager">Company Operations Manager</option>
                         </select>
                     </div>
                     
-                    <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '16px' }}>
-                        Note: Further granular city/bus/schedule assignment can be added here.
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '12px', lineHeight: 1.5 }}>
+                        Duty scopes determine system route authorizations and schedule dispatch permissions.
                     </p>
 
-                    {error && <p className="error-text">{error}</p>}
-                    <button type="submit" className="btn-primary" style={{ width: '100%', marginTop: '16px' }}>
-                        Update Scope
-                    </button>
+                    {error && <div className="error-text">{error}</div>}
+                    <div className="modal-actions">
+                        <button type="button" onClick={() => setIsScopeModalOpen(false)} className="btn-secondary">Cancel</button>
+                        <button type="submit" className="btn-primary">
+                            <Sliders size={15} />
+                            <span>Save Scope</span>
+                        </button>
+                    </div>
                 </form>
             </Modal>
 
             <style jsx>{`
                 .page-container {
-                    padding: 24px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 24px;
                 }
-                .form-group {
-                    margin-bottom: 20px;
+                .page-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-end;
                 }
-                .form-group label {
-                    display: block;
-                    margin-bottom: 8px;
+                .page-title {
+                    font-size: 26px;
+                    font-weight: 800;
+                    margin: 0;
+                    color: var(--foreground);
+                    letter-spacing: -0.025em;
+                }
+                .page-subtitle {
+                    color: var(--text-muted);
+                    margin: 6px 0 0 0;
                     font-size: 13px;
-                    font-weight: 600;
-                    color: #94a3b8;
-                    text-transform: uppercase;
                 }
-                .form-input {
-                    width: 100%;
-                    padding: 12px 16px;
-                    background: rgba(0, 0, 0, 0.2);
-                    border: 1px solid var(--card-border);
-                    border-radius: 10px;
-                    color: white;
-                    outline: none;
+                .modal-actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 10px;
+                    margin-top: 24px;
                 }
                 .error-text {
-                    color: #ef4444;
+                    background: var(--danger-light);
+                    color: var(--danger);
+                    padding: 10px 14px;
+                    border-radius: var(--radius-md);
                     font-size: 13px;
-                    margin-top: 8px;
+                    margin-top: 14px;
+                    border: 1px solid rgba(239, 68, 68, 0.25);
                 }
-                .status-badge {
-                    padding: 4px 10px;
-                    border-radius: 6px;
-                    font-size: 12px;
-                    font-weight: 600;
-                    text-transform: capitalize;
-                }
-                .status-badge.approved { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-                .status-badge.pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-                .status-badge.rejected { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-                
-                .btn-success-sm {
-                    background: rgba(16, 185, 129, 0.1);
-                    color: #10b981;
-                    border: 1px solid rgba(16, 185, 129, 0.2);
-                    padding: 6px 12px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 12px;
-                    font-weight: 600;
-                    transition: all 0.2s;
-                }
-                .btn-success-sm:hover { background: rgba(16, 185, 129, 0.2); }
-                
-                .btn-primary-sm {
-                    background: rgba(79, 70, 229, 0.1);
-                    color: #818cf8;
-                    border: 1px solid rgba(79, 70, 229, 0.2);
-                    padding: 6px 12px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-size: 12px;
-                    font-weight: 600;
-                    transition: all 0.2s;
-                }
-                .btn-primary-sm:hover { background: rgba(79, 70, 229, 0.2); }
             `}</style>
         </main>
     );

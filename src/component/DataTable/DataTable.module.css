@@ -1,62 +1,112 @@
-.tableContainer {
-    width: 100%;
-    overflow-x: auto;
-    border-radius: 12px;
-}
-
-.table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    text-align: left;
-}
-
-.th {
-    padding: 16px 20px;
-    color: #64748b;
-    font-weight: 600;
-    border-bottom: 1px solid var(--card-border);
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    background: rgba(255, 255, 255, 0.01);
-}
-
-.tr {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.tr:hover {
-    background: rgba(255, 255, 255, 0.03);
-    transform: scale(1.002);
-}
-
-.td {
-    padding: 18px 20px;
-    color: #cbd5e1;
-    font-size: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.empty {
-    text-align: center;
-    padding: 48px;
-    color: #64748b;
-    font-style: italic;
+.container {
+    padding: 22px;
+    border-radius: var(--radius-lg);
 }
 
 .headerRow {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 28px;
-    padding: 0 4px;
+    margin-bottom: 18px;
+    padding: 0 2px;
+}
+
+.titleGroup {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .title {
-    font-size: 22px;
-    font-weight: 800;
+    font-size: 17px;
+    font-weight: 700;
     margin: 0;
-    letter-spacing: -0.5px;
-    color: #f8fafc;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+}
+
+.countBadge {
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--subtle-bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--card-border);
+    padding: 2px 8px;
+    border-radius: 9999px;
+}
+
+.actionSlot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tableContainer {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--card-border);
+    background: rgba(11, 15, 25, 0.4);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.th {
+    padding: 12px 16px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    border-bottom: 1px solid var(--card-border);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.tr {
+    transition: background 0.15s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tr:last-child {
+    border-bottom: none;
+}
+
+.tr:hover {
+    background: var(--hover-bg);
+}
+
+.td {
+    padding: 13px 16px;
+    color: var(--text-muted);
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+.empty {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.loadingBox, .emptyBox {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-secondary);
+}
+
+.spinIcon {
+    color: var(--primary);
+    animation: spin 1s linear infinite;
+}
+
+.emptyIcon {
+    opacity: 0.4;
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Loader2, Inbox } from 'lucide-react';
 import styles from './DataTable.module.css';
 
 interface Column {
@@ -18,10 +19,17 @@ interface Props {
 
 export default function DataTable({ title, columns, data, loading, actionButton, onRowClick }: Props) {
     return (
-        <div className="glass glass-card" style={{ padding: '24px' }}>
+        <div className={`glass ${styles.container}`}>
             <div className={styles.headerRow}>
-                <h2 className={styles.title}>{title}</h2>
-                {actionButton && <div>{actionButton}</div>}
+                <div className={styles.titleGroup}>
+                    <h2 className={styles.title}>{title}</h2>
+                    {!loading && (
+                        <span className={styles.countBadge}>
+                            {data.length} {data.length === 1 ? 'record' : 'records'}
+                        </span>
+                    )}
+                </div>
+                {actionButton && <div className={styles.actionSlot}>{actionButton}</div>}
             </div>
 
             <div className={styles.tableContainer}>
@@ -36,11 +44,21 @@ export default function DataTable({ title, columns, data, loading, actionButton,
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={columns.length} className={styles.empty}>Loading data...</td>
+                                <td colSpan={columns.length} className={styles.empty}>
+                                    <div className={styles.loadingBox}>
+                                        <Loader2 size={24} className={styles.spinIcon} />
+                                        <span>Loading operational records...</span>
+                                    </div>
+                                </td>
                             </tr>
                         ) : data.length === 0 ? (
                             <tr>
-                                <td colSpan={columns.length} className={styles.empty}>No records found.</td>
+                                <td colSpan={columns.length} className={styles.empty}>
+                                    <div className={styles.emptyBox}>
+                                        <Inbox size={32} className={styles.emptyIcon} />
+                                        <span>No matching records found.</span>
+                                    </div>
+                                </td>
                             </tr>
                         ) : (
                             data.map((row, i) => (

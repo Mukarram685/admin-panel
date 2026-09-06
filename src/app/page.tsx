@@ -1,5 +1,24 @@
 "use client";
 import { useEffect, useState } from "react";
+import {
+  Building2,
+  DollarSign,
+  BusFront,
+  Ticket,
+  CalendarClock,
+  Route,
+  Users,
+  Check,
+  X,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  ShieldCheck,
+  Mail,
+  User,
+  Loader2,
+  Info
+} from "lucide-react";
 import DashboardCard from "@/component/DashboardCard/DashboardCard";
 import DataTable from "@/component/DataTable/DataTable";
 import Modal from "@/component/Modal/Modal";
@@ -146,14 +165,23 @@ export default function Home() {
     { key: "departure", header: "Departure", render: (row: any) => `${new Date(row.departureDate).toLocaleDateString()} at ${row.departureTime}` },
     { key: "status", header: "Status", render: (row: any) => (
       <span className={`badge ${row.status === 'completed' ? 'badge-success' : row.status === 'active' ? 'badge-primary' : 'badge-error'}`}>
-        {row.status}
+        {row.status === 'completed' && <CheckCircle2 size={11} />}
+        {row.status === 'active' && <Clock size={11} />}
+        {row.status !== 'completed' && row.status !== 'active' && <AlertCircle size={11} />}
+        <span>{row.status}</span>
       </span>
     )},
     { key: "actions", header: "Actions", render: (row: any) => (
       <div className={styles.actions}>
-        <button className="btn-secondary btn-sm" onClick={() => handleViewPassengers(row)}>Passengers</button>
+        <button className="btn-icon-primary" onClick={() => handleViewPassengers(row)} title="View Manifest">
+          <Users size={13} />
+          <span>Manifest</span>
+        </button>
         {row.status !== "completed" && (
-          <button className="btn-primary btn-sm" onClick={() => handleCompleteTrip(row._id)}>Complete</button>
+          <button className="btn-icon-success" onClick={() => handleCompleteTrip(row._id)} title="Complete Trip">
+            <CheckCircle2 size={13} />
+            <span>Complete</span>
+          </button>
         )}
       </div>
     )}
@@ -168,9 +196,9 @@ export default function Home() {
              "Company Performance Overview"}
         </h1>
         <p className={styles.subtitle}>
-            {user?.role === "superadmin" ? "Real-time insights across all registered bus companies." : 
-             user?.role === "operator" ? "Manage your assigned trips and passenger manifests." : 
-             "Summary of your company's bookings and operational health."}
+            {user?.role === "superadmin" ? "Real-time logistics, partners, and network telemetry." : 
+             user?.role === "operator" ? "Manage assigned departures, passenger manifests, and route milestones." : 
+             "Summary of bookings, operational fleet, and revenue performance."}
         </p>
         {error && <p className={styles.error}>{error}</p>}
       </header>
@@ -179,27 +207,37 @@ export default function Home() {
         <section className={styles.operatorHeader}>
           <div className={styles.operatorInfo}>
             <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>Affiliated Company</span>
+              <span className={styles.infoLabel}>
+                <Building2 size={12} />
+                Affiliated Company
+              </span>
               <span className={styles.infoValue}>{user?.company?.name || "Independent"}</span>
             </div>
             <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>Operator Email</span>
+              <span className={styles.infoLabel}>
+                <Mail size={12} />
+                Operator Email
+              </span>
               <span className={styles.infoValue}>{user?.email}</span>
             </div>
             <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>Personnel Name</span>
+              <span className={styles.infoLabel}>
+                <User size={12} />
+                Personnel Name
+              </span>
               <span className={styles.infoValue}>{user?.name}</span>
             </div>
           </div>
           <div className={styles.operatorBadge}>
-            {user?.operatorType?.replace('_', ' ').toUpperCase() || 'TRIP OPERATOR'}
+            <ShieldCheck size={13} />
+            <span>{user?.operatorType?.replace('_', ' ').toUpperCase() || 'TRIP OPERATOR'}</span>
           </div>
         </section>
       )}
 
       {loading ? (
         <div className={styles.loading}>
-            <div className={styles.spinner}></div>
+            <Loader2 size={36} className={styles.spinner} />
             <p>Collating latest logistics data...</p>
         </div>
       ) : (
@@ -214,15 +252,15 @@ export default function Home() {
                        user?.role === 'operator' ? "Current Schedule" : 
                        "Confirmed Trips"} 
                 trendType="up"
-                icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>}
+                icon={user?.role === 'superadmin' ? <Building2 size={18} /> : user?.role === 'operator' ? <CalendarClock size={18} /> : <Ticket size={18} />}
             />
             {user?.role !== 'operator' && (
               <DashboardCard 
                   title={user?.role === 'superadmin' ? "Gross System Volume" : "Total Payout Amount"} 
-                  value={`Rs ${stats.revenue.toLocaleString()}`} 
-                  trend={user?.role === 'superadmin' ? "System-wide Revenue" : "Earnings to date"} 
+                  value={`PKR ${stats.revenue.toLocaleString()}`} 
+                  trend={user?.role === 'superadmin' ? "System Revenue" : "Earnings to Date"} 
                   trendType="up"
-                  icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>}
+                  icon={<DollarSign size={18} />}
               />
             )}
             <DashboardCard 
@@ -230,16 +268,19 @@ export default function Home() {
                        user?.operatorType === 'city_manager' ? "Assigned Cities" : "Operational Fleet"} 
                 value={user?.role === 'superadmin' ? stats.buses.toString() : 
                        (user?.operatorType === 'city_manager' ? stats.routes.toString() : stats.buses.toString())} 
-                trend="Active Logistics" 
+                trend="Active Fleet" 
                 trendType="up"
-                icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="22" height="13" rx="2" ry="2"></rect><path d="M7 21h0"></path><path d="M17 21h0"></path><path d="M4 17h0"></path><path d="M20 17h0"></path></svg>}
+                icon={user?.operatorType === 'city_manager' ? <Route size={18} /> : <BusFront size={18} />}
             />
           </div>
 
           {user?.role === "superadmin" ? (
             <div className={styles.superadminContent}>
               <section className={styles.tableSection}>
-                <h2>Pending Company Registrations</h2>
+                <div className={styles.sectionHeader}>
+                  <Clock size={16} className={styles.sectionIcon} />
+                  <h2>Pending Company Registrations</h2>
+                </div>
                 <div className="table-responsive">
                   {companies.filter(c => c.status === 'pending').length === 0 ? (
                     <p className={styles.noRequests}>No pending registration requests.</p>
@@ -263,8 +304,14 @@ export default function Home() {
                             <td>{company.address}</td>
                             <td>
                               <div className={styles.actions}>
-                                <button className="btn-primary btn-sm" onClick={() => handleApproveCompany(company._id, "approve")}>Approve</button>
-                                <button className="btn-secondary btn-sm" onClick={() => handleApproveCompany(company._id, "reject")}>Reject</button>
+                                <button className="btn-icon-success" onClick={() => handleApproveCompany(company._id, "approve")}>
+                                  <Check size={13} />
+                                  <span>Approve</span>
+                                </button>
+                                <button className="btn-icon-danger" onClick={() => handleApproveCompany(company._id, "reject")}>
+                                  <X size={13} />
+                                  <span>Reject</span>
+                                </button>
                               </div>
                             </td>
                           </tr>
@@ -276,7 +323,10 @@ export default function Home() {
               </section>
 
               <section className={styles.tableSection}>
-                <h2>Registered Transport Companies</h2>
+                <div className={styles.sectionHeader}>
+                  <Building2 size={16} className={styles.sectionIcon} />
+                  <h2>Registered Transport Companies</h2>
+                </div>
                 <div className="table-responsive">
                   {companies.filter(c => c.status === 'approved').length === 0 ? (
                     <p className={styles.noRequests}>No active companies registered.</p>
@@ -299,7 +349,10 @@ export default function Home() {
                             <td>{company.phone}</td>
                             <td>{company.address}</td>
                             <td>
-                              <span className="badge badge-success" style={{ textTransform: 'capitalize' }}>Approved</span>
+                              <span className="badge badge-success">
+                                <CheckCircle2 size={11} />
+                                <span>Approved</span>
+                              </span>
                             </td>
                           </tr>
                         ))}
@@ -312,20 +365,23 @@ export default function Home() {
           ) : user?.role === 'operator' ? (
             <div className={styles.operatorContent}>
               <DataTable 
-                title="Your Assigned Tasks" 
+                title="Your Assigned Duty Manifests" 
                 columns={tripColumns} 
                 data={trips} 
                 loading={loading}
               />
             </div>
           ) : (
-            <div className={`glass glass-card ${styles.summaryBox}`}>
-                  <div className={styles.summaryContent}>
+            <div className={`glass ${styles.summaryBox}`}>
+                <div className={styles.summaryContent}>
+                    <div className={styles.summaryHeader}>
+                      <Info size={18} className={styles.summaryIcon} />
                       <h3>Operational Performance Notice</h3>
-                      <p>
-                        Detailed passenger and operator information is restricted to protect privacy. Only consolidated volumes and financial metrics are displayed on this dashboard.
-                      </p>
-                  </div>
+                    </div>
+                    <p>
+                      Detailed passenger personal information is safeguarded to preserve privacy. Aggregated bookings volume and company financial metrics are synchronized above.
+                    </p>
+                </div>
             </div>
           )}
 
@@ -336,9 +392,12 @@ export default function Home() {
           >
             <div className={styles.passengerList}>
               {loadingPassengers ? (
-                <p>Loading manifests...</p>
+                <div className={styles.loading}>
+                  <Loader2 size={24} className={styles.spinner} />
+                  <p>Loading manifests...</p>
+                </div>
               ) : passengers.length === 0 ? (
-                <p>No passengers booked for this trip yet.</p>
+                <p className={styles.noRequests}>No passengers booked for this trip yet.</p>
               ) : (
                 <table className={styles.pTable}>
                   <thead>
@@ -353,11 +412,11 @@ export default function Home() {
                   <tbody>
                     {passengers.map((p, i) => (
                       <tr key={i}>
-                        <td>{p.seatNumber}</td>
+                        <td><span className="badge badge-primary">{p.seatNumber}</span></td>
                         <td>{p.passengerName}</td>
                         <td>{p.passengerPhone}</td>
                         <td>{p.gender}</td>
-                        <td>{p.pnr}</td>
+                        <td><span className={styles.refCode}>{p.pnr}</span></td>
                       </tr>
                     ))}
                   </tbody>

@@ -1,5 +1,22 @@
 "use client";
 import { useEffect, useState } from "react";
+import {
+    CalendarPlus,
+    FileText,
+    Edit3,
+    Play,
+    CheckCircle2,
+    Clock,
+    BusFront,
+    User,
+    CalendarClock,
+    DollarSign,
+    AlertCircle,
+    Info,
+    Tag,
+    Phone,
+    ArrowRight
+} from "lucide-react";
 import { fetchAPI } from "@/utils/api";
 import DataTable from "@/component/DataTable/DataTable";
 import Modal from "@/component/Modal/Modal";
@@ -18,6 +35,16 @@ export default function SchedulesPage() {
     const [loadingPassengers, setLoadingPassengers] = useState(false);
     const [creating, setCreating] = useState(false);
     const [error, setError] = useState("");
+
+    // Edit modal states for company admin / superadmin (only bus & operator can be edited)
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingSchedule, setEditingSchedule] = useState<any>(null);
+    const [editFormData, setEditFormData] = useState({
+        busId: "",
+        operatorId: ""
+    });
+    const [updating, setUpdating] = useState(false);
+    const [editError, setEditError] = useState("");
 
     const getTodayDate = () => {
         const today = new Date();
@@ -60,7 +87,7 @@ export default function SchedulesPage() {
     };
 
     const loadDropdowns = async () => {
-        if (user?.role === 'operator') return; // Operators don't need dropdowns for creation
+        if (user?.role === 'operator') return;
         try {
             const [routesRes, busesRes, operatorsRes] = await Promise.all([
                 fetchAPI("/routes/allRoutes"),
@@ -100,13 +127,46 @@ export default function SchedulesPage() {
         }
     };
 
+    const handleOpenEdit = (schedule: any) => {
+        setEditingSchedule(schedule);
+        setEditFormData({
+            busId: schedule.bus?._id || schedule.bus || "",
+            operatorId: schedule.operator?._id || schedule.operator || ""
+        });
+        setEditError("");
+        setIsEditModalOpen(true);
+    };
+
+    const handleUpdate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingSchedule) return;
+        setUpdating(true);
+        setEditError("");
+        try {
+            const res = await fetchAPI(`/schedules/update/${editingSchedule._id}`, {
+                method: "PUT",
+                body: JSON.stringify(editFormData),
+            });
+            if (res.success && res.schedule) {
+                setSchedules((prev: any) => prev.map((s: any) => s._id === editingSchedule._id ? res.schedule : s));
+            } else {
+                loadSchedules();
+            }
+            setIsEditModalOpen(false);
+            setEditingSchedule(null);
+        } catch (err: any) {
+            setEditError(err.message || "Failed to update schedule");
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     const handleViewDetails = async (schedule: any) => {
         setSelectedSchedule(schedule);
         setIsDetailModalOpen(true);
         setLoadingPassengers(true);
         try {
             const res = await fetchAPI(`/bookings/schedule/${schedule._id}`);
-            // Group seats by passenger details WITHIN each individual booking
             const processedList = (res.bookings || []).flatMap((b: any) => {
                 const groups: Record<string, any> = {};
                 (b.seats || []).forEach((s: any) => {
@@ -158,45 +218,102 @@ export default function SchedulesPage() {
         {
             key: "route", header: "Route", render: (r: any) => (
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontWeight: 600 }}>{r.route?.fromCity} → {r.route?.toCity}</span>
-                    <span style={{ fontSize: '12px', color: '#64748b' }}>{r.route?.from} to {r.route?.to}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: 'var(--foreground)' }}>
+                        <span>{r.route?.fromCity}</span>
+                        <ArrowRight size={13} color="var(--primary)" />
+                        <span>{r.route?.toCity}</span>
+                    </div>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{r.route?.from} to {r.route?.to}</span>
                 </div>
             )
         },
-        { key: "bus", header: "Bus", render: (r: any) => `${r.bus?.busNumber} (${r.bus?.type})` },
         { 
-            key: "operator", header: "Operator", render: (r: any) => {
+            key: "bus", 
+            header: "Assigned Bus", 
+            render: (r: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <BusFront size={14} color="var(--primary)" />
+                    <span style={{ fontWeight: 600 }}>{r.bus?.busNumber}</span>
+                    <span className="badge badge-info" style={{ fontSize: '10px' }}>{r.bus?.type}</span>
+                </div>
+            )
+        },
+        { 
+            key: "operator", 
+            header: "Driver / Conductor", 
+            render: (r: any) => {
                 if (r.operator && typeof r.operator === 'object') {
                     return (
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontWeight: 600, color: '#f8fafc' }}>{r.operator.name}</span>
-                            <span style={{ fontSize: '11px', color: '#64748b' }}>{r.operator.email}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <User size={13} color="var(--text-secondary)" />
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{r.operator.name}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{r.operator.email}</span>
+                            </div>
                         </div>
                     );
                 }
-                return <span style={{ fontSize: '12px', color: '#94a3b8' }}>{r.operator ? `ID: ${String(r.operator).substring(0, 8)}...` : 'N/A'}</span>;
+                return <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{r.operator ? `ID: ${String(r.operator).substring(0, 8)}...` : 'N/A'}</span>;
             }
         },
-        { key: "departureDate", header: "Date", render: (r: any) => new Date(r.departureDate).toLocaleDateString() },
-        { key: "time", header: "Time", render: (r: any) => `${r.departureTime} - ${r.arrivalTime}` },
+        { 
+            key: "departureDate", 
+            header: "Date", 
+            render: (r: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px' }}>
+                    <Clock size={13} color="var(--text-secondary)" />
+                    <span>{new Date(r.departureDate).toLocaleDateString()}</span>
+                </div>
+            )
+        },
+        { key: "time", header: "Time Range", render: (r: any) => `${r.departureTime} - ${r.arrivalTime}` },
         {
             key: "status", header: "Status", render: (r: any) => (
-                <span className={`status-badge ${r.status || 'active'}`}>
-                    {r.status || 'Active'}
+                <span className={`badge ${
+                    r.status === 'completed' ? 'badge-success' : 
+                    r.status === 'in-progress' ? 'badge-warning' : 
+                    r.status === 'cancelled' ? 'badge-error' : 'badge-info'
+                }`}>
+                    {r.status === 'completed' && <CheckCircle2 size={11} />}
+                    {r.status === 'in-progress' && <Clock size={11} />}
+                    {r.status === 'cancelled' && <AlertCircle size={11} />}
+                    {(!r.status || r.status === 'active') && <Clock size={11} />}
+                    <span>{r.status || 'Active'}</span>
                 </span>
             )
         },
         {
             key: "actions", header: "Actions", render: (r: any) => (
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => handleViewDetails(r)} className="btn-secondary btn-sm">Manifest</button>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                    <button onClick={() => handleViewDetails(r)} className="btn-icon-primary" title="View Manifest">
+                        <FileText size={13} />
+                        <span>Manifest</span>
+                    </button>
+                    {user?.role !== 'operator' && (
+                        <button 
+                            onClick={() => handleOpenEdit(r)} 
+                            className="btn-icon-primary"
+                            title="Edit Assignment"
+                            disabled={r.status === 'completed' || r.status === 'cancelled'}
+                            style={{ opacity: (r.status === 'completed' || r.status === 'cancelled') ? 0.4 : 1 }}
+                        >
+                            <Edit3 size={13} />
+                            <span>Edit</span>
+                        </button>
+                    )}
                     {user?.role === 'operator' && (
                         <>
                             {r.status === 'active' && (
-                                <button onClick={() => handleStartTrip(r._id)} className="btn-primary btn-sm">Start</button>
+                                <button onClick={() => handleStartTrip(r._id)} className="btn-icon-success" title="Start Departure">
+                                    <Play size={13} />
+                                    <span>Start</span>
+                                </button>
                             )}
                             {r.status === 'in-progress' && (
-                                <button onClick={() => handleCompleteTrip(r._id)} className="btn-primary btn-sm">Complete</button>
+                                <button onClick={() => handleCompleteTrip(r._id)} className="btn-icon-success" title="Complete Journey">
+                                    <CheckCircle2 size={13} />
+                                    <span>Complete</span>
+                                </button>
                             )}
                         </>
                     )}
@@ -209,25 +326,27 @@ export default function SchedulesPage() {
         <main className="page-container">
             <header className="page-header">
                 <div>
-                    <h1 className="page-title">{user?.role === 'operator' ? "My Assigned Schedules" : "Schedules Management"}</h1>
+                    <h1 className="page-title">{user?.role === 'operator' ? "Assigned Duty Departures" : "Schedules & Dispatching"}</h1>
                     <p className="page-subtitle">
-                        {user?.role === 'operator' ? "View your duty manifest and update trip status." : "Coordinate bus departures and manage route timings."}
+                        {user?.role === 'operator' ? "View passenger manifests, departure schedules, and update trip milestones." : "Coordinate vehicle departures, assign drivers, and manage route timings."}
                     </p>
                 </div>
                 {user?.role !== 'operator' && (
                     <button onClick={() => setIsModalOpen(true)} className="btn-primary">
-                        + Create Schedule
+                        <CalendarPlus size={15} />
+                        <span>Dispatch Schedule</span>
                     </button>
                 )}
             </header>
 
             <DataTable 
-                title={user?.role === 'operator' ? "Current Assignments" : "Upcoming Departures"} 
+                title={user?.role === 'operator' ? "Assigned Shifts" : "Upcoming Departures"} 
                 columns={columns} 
                 data={schedules} 
                 loading={loading} 
             />
 
+            {/* Create Modal */}
             <Modal 
                 isOpen={isModalOpen} 
                 onClose={() => setIsModalOpen(false)} 
@@ -237,24 +356,24 @@ export default function SchedulesPage() {
                     {error && <div className="error-text">{error}</div>}
 
                     <div className="form-group">
-                        <label>Select Route</label>
-                        <select required className="form-input" value={formData.routeId} onChange={e => setFormData({ ...formData, routeId: e.target.value })}>
+                        <label className="form-label">Select Route</label>
+                        <select required className="form-select" value={formData.routeId} onChange={e => setFormData({ ...formData, routeId: e.target.value })}>
                             <option value="" disabled>Choose a route...</option>
                             {availableRoutes.map(r => <option key={r._id} value={r._id}>{r.fromCity} → {r.toCity} ({r.distance}km)</option>)}
                         </select>
                     </div>
 
                     <div className="form-group">
-                        <label>Select Bus</label>
-                        <select required className="form-input" value={formData.busId} onChange={e => setFormData({ ...formData, busId: e.target.value })}>
+                        <label className="form-label">Assign Bus</label>
+                        <select required className="form-select" value={formData.busId} onChange={e => setFormData({ ...formData, busId: e.target.value })}>
                             <option value="" disabled>Choose a bus...</option>
                             {availableBuses.map(b => <option key={b._id} value={b._id}>{b.busNumber} - {b.type} ({b.totalSeats} seats)</option>)}
                         </select>
                     </div>
 
                     <div className="form-group">
-                        <label>Select Operator</label>
-                        <select required className="form-input" value={formData.operatorId} onChange={e => setFormData({ ...formData, operatorId: e.target.value })}>
+                        <label className="form-label">Assign Operator / Conductor</label>
+                        <select required className="form-select" value={formData.operatorId} onChange={e => setFormData({ ...formData, operatorId: e.target.value })}>
                             <option value="" disabled>Choose an operator...</option>
                             {availableOperators.map(o => <option key={o._id} value={o._id}>{o.name} ({o.email})</option>)}
                         </select>
@@ -262,7 +381,7 @@ export default function SchedulesPage() {
 
                     <div className="form-grid">
                         <div className="form-group">
-                            <label>Departure Date</label>
+                            <label className="form-label">Departure Date</label>
                             <input 
                                 type="date" 
                                 required 
@@ -275,14 +394,14 @@ export default function SchedulesPage() {
                             />
                         </div>
                         <div className="form-group">
-                            <label>Fare (Rs)</label>
+                            <label className="form-label">Ticket Fare (PKR)</label>
                             <input type="number" required min={100} className="form-input" value={formData.fare} onChange={e => setFormData({ ...formData, fare: Number(e.target.value) })} />
                         </div>
                     </div>
 
                     <div className="form-grid">
                         <div className="form-group">
-                            <label>Departure Time</label>
+                            <label className="form-label">Departure Time</label>
                             <input 
                                 type="time" 
                                 required 
@@ -294,7 +413,7 @@ export default function SchedulesPage() {
                             />
                         </div>
                         <div className="form-group">
-                            <label>Arrival Time</label>
+                            <label className="form-label">Arrival Time</label>
                             <input 
                                 type="time" 
                                 required 
@@ -310,7 +429,91 @@ export default function SchedulesPage() {
                     <div className="modal-actions">
                         <button type="button" onClick={() => setIsModalOpen(false)} className="btn-secondary">Cancel</button>
                         <button type="submit" disabled={creating} className="btn-primary">
-                            {creating ? 'Dispatching...' : 'Dispatch Schedule'}
+                            <CalendarPlus size={15} />
+                            <span>{creating ? 'Dispatching...' : 'Dispatch Schedule'}</span>
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Edit Modal (Only Bus and Operator) */}
+            <Modal 
+                isOpen={isEditModalOpen} 
+                onClose={() => { setIsEditModalOpen(false); setEditingSchedule(null); }} 
+                title={`Edit Schedule Assignment - ${editingSchedule?.bus?.busNumber || 'Assignment'}`}
+            >
+                <form onSubmit={handleUpdate}>
+                    {editError && <div className="error-text">{editError}</div>}
+
+                    <div className="edit-info-banner">
+                        <div className="info-item">
+                            <span className="info-label">Route</span>
+                            <span className="info-value">{editingSchedule?.route?.fromCity} → {editingSchedule?.route?.toCity}</span>
+                        </div>
+                        <div className="info-item">
+                            <span className="info-label">Date & Time</span>
+                            <span className="info-value">
+                                {editingSchedule?.departureDate ? new Date(editingSchedule.departureDate).toLocaleDateString() : ''} ({editingSchedule?.departureTime} - {editingSchedule?.arrivalTime})
+                            </span>
+                        </div>
+                        <div className="info-item">
+                            <span className="info-label">Booked Seats</span>
+                            <span className="info-value">
+                                {editingSchedule?.bookedSeats?.length || 0} / {editingSchedule?.bus?.totalSeats || 0} seats
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="edit-hint-note">
+                        <Info size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <span><strong>Policy:</strong> Only the <strong>Bus Number</strong> and <strong>Assigned Operator</strong> can be changed for an existing schedule.</span>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Assign New Bus</label>
+                        <select 
+                            required 
+                            className="form-select" 
+                            value={editFormData.busId} 
+                            onChange={e => setEditFormData({ ...editFormData, busId: e.target.value })}
+                        >
+                            <option value="" disabled>Choose a bus...</option>
+                            {availableBuses.map(b => (
+                                <option key={b._id} value={b._id}>
+                                    {b.busNumber} - {b.type} ({b.totalSeats} seats)
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Assign New Operator</label>
+                        <select 
+                            required 
+                            className="form-select" 
+                            value={editFormData.operatorId} 
+                            onChange={e => setEditFormData({ ...editFormData, operatorId: e.target.value })}
+                        >
+                            <option value="" disabled>Choose an operator...</option>
+                            {availableOperators.map(o => (
+                                <option key={o._id} value={o._id}>
+                                    {o.name} ({o.email})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="modal-actions">
+                        <button 
+                            type="button" 
+                            onClick={() => { setIsEditModalOpen(false); setEditingSchedule(null); }} 
+                            className="btn-secondary"
+                        >
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={updating} className="btn-primary">
+                            <Edit3 size={15} />
+                            <span>{updating ? 'Saving Changes...' : 'Save Changes'}</span>
                         </button>
                     </div>
                 </form>
@@ -320,31 +523,33 @@ export default function SchedulesPage() {
             <Modal 
                 isOpen={isDetailModalOpen} 
                 onClose={() => setIsDetailModalOpen(false)} 
-                title={`Passenger Manifest - ${selectedSchedule?.bus?.busNumber}`}
+                title={`Passenger Manifest - ${selectedSchedule?.bus?.busNumber || 'Bus'}`}
                 width="800px"
             >
                 <div className="manifest-container">
                     <div className="manifest-header">
                         <div className="m-info">
-                            <span className="m-label">Route</span>
+                            <span className="m-label">Journey Route</span>
                             <span className="m-value">{selectedSchedule?.route?.fromCity} to {selectedSchedule?.route?.toCity}</span>
                         </div>
                         <div className="m-info">
-                            <span className="m-label">Departure</span>
+                            <span className="m-label">Scheduled Departure</span>
                             <span className="m-value">{selectedSchedule?.departureTime} | {new Date(selectedSchedule?.departureDate).toLocaleDateString()}</span>
                         </div>
                         <div className="m-info">
                             <span className="m-label">Status</span>
-                            <span className={`status-badge ${selectedSchedule?.status}`}>{selectedSchedule?.status}</span>
+                            <span className={`badge ${selectedSchedule?.status === 'completed' ? 'badge-success' : 'badge-primary'}`}>
+                                {selectedSchedule?.status || 'Active'}
+                            </span>
                         </div>
                     </div>
 
                     <div className="p-list">
-                        <h3 className="section-title">Booked Passengers</h3>
+                        <h3 className="section-title">Verified Manifest</h3>
                         {loadingPassengers ? (
-                            <p className="loading-text">Loading passenger logs...</p>
+                            <p className="loading-text">Loading passenger manifests...</p>
                         ) : passengers.length === 0 ? (
-                            <p className="empty-text">No bookings found for this trip.</p>
+                            <p className="empty-text">No passenger bookings found for this trip.</p>
                         ) : (
                             <table className="p-table">
                                 <thead>
@@ -377,18 +582,20 @@ export default function SchedulesPage() {
                                 <button 
                                     onClick={() => handleStartTrip(selectedSchedule._id)} 
                                     className="btn-primary w-full"
-                                    style={{ marginTop: '24px' }}
+                                    style={{ marginTop: '20px' }}
                                 >
-                                    Start Trip Now
+                                    <Play size={15} />
+                                    <span>Start Journey Now</span>
                                 </button>
                             )}
                             {selectedSchedule?.status === 'in-progress' && (
                                 <button 
                                     onClick={() => handleCompleteTrip(selectedSchedule._id)} 
                                     className="btn-primary w-full"
-                                    style={{ marginTop: '24px' }}
+                                    style={{ marginTop: '20px' }}
                                 >
-                                    Mark Trip as Completed
+                                    <CheckCircle2 size={15} />
+                                    <span>Mark Trip as Completed</span>
                                 </button>
                             )}
                         </div>
@@ -397,49 +604,57 @@ export default function SchedulesPage() {
             </Modal>
 
             <style jsx>{`
-                .page-container { padding: 32px; }
-                .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; }
-                .page-title { font-size: 32px; font-weight: 800; margin: 0; color: #f8fafc; }
-                .page-subtitle { color: #94a3b8; margin: 4px 0 0 0; font-size: 15px; }
+                .page-container {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 24px;
+                }
+                .page-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-end;
+                }
+                .page-title {
+                    font-size: 26px;
+                    font-weight: 800;
+                    margin: 0;
+                    color: var(--foreground);
+                    letter-spacing: -0.025em;
+                }
+                .page-subtitle {
+                    color: var(--text-muted);
+                    margin: 6px 0 0 0;
+                    font-size: 13px;
+                }
 
-                .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-                .form-group { margin-bottom: 20px; }
-                .form-group label { display: block; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; }
-                .form-input { width: 100%; padding: 12px 16px; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; color: white; outline: none; transition: all 0.2s; }
-                .form-input:focus { border-color: var(--primary); background: rgba(0, 0, 0, 0.3); }
-                .form-input[type="date"], .form-input[type="time"] { color-scheme: dark; color: #f8fafc; font-family: inherit; }
-                .form-input::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.8; }
-                .form-input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+                .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+                .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
                 
-                .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; }
-                .btn-secondary { background: transparent; border: 1px solid rgba(255, 255, 255, 0.1); color: #94a3b8; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
-                .btn-secondary:hover { background: rgba(255, 255, 255, 0.05); color: white; }
+                .edit-info-banner { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 14px; background: rgba(255, 255, 255, 0.03); border-radius: var(--radius-md); margin-bottom: 16px; border: 1px solid var(--card-border); }
+                .info-item { display: flex; flex-direction: column; gap: 4px; }
+                .info-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+                .info-value { font-size: 13px; color: var(--foreground); font-weight: 600; }
+                .edit-hint-note { font-size: 13px; color: var(--text-muted); background: var(--info-light); padding: 10px 14px; border-radius: var(--radius-sm); border: 1px solid rgba(59, 130, 246, 0.25); margin-bottom: 18px; line-height: 1.4; display: flex; gap: 8px; align-items: flex-start; }
+
+                .error-text { background: var(--danger-light); color: var(--danger); padding: 10px 14px; border-radius: var(--radius-md); font-size: 13px; margin-bottom: 16px; border: 1px solid rgba(239, 68, 68, 0.25); }
                 
-                .error-text { background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 12px; border-radius: 8px; font-size: 14px; margin-bottom: 20px; border: 1px solid rgba(239, 68, 68, 0.2); }
-                
-                .manifest-header { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 20px; background: rgba(255, 255, 255, 0.03); border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(255, 255, 255, 0.05); }
+                .manifest-header { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 16px; background: var(--subtle-bg); border-radius: var(--radius-md); margin-bottom: 20px; border: 1px solid var(--card-border); }
                 .m-info { display: flex; flex-direction: column; gap: 4px; }
-                .m-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-                .m-value { font-size: 15px; color: #f8fafc; font-weight: 600; }
+                .m-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+                .m-value { font-size: 14px; color: var(--foreground); font-weight: 600; }
                 
-                .section-title { font-size: 14px; font-weight: 700; color: #f8fafc; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; border-left: 3px solid var(--primary); padding-left: 12px; }
+                .section-title { font-size: 13px; font-weight: 700; color: var(--foreground); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.05em; border-left: 3px solid var(--primary); padding-left: 10px; }
                 
                 .p-table { width: 100%; border-collapse: collapse; }
-                .p-table th { text-align: left; padding: 12px; font-size: 12px; color: #64748b; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-                .p-table td { padding: 16px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.02); font-size: 14px; color: #cbd5e1; }
+                .p-table th { text-align: left; padding: 10px 12px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--card-border); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+                .p-table td { padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); font-size: 13px; color: var(--text-muted); }
                 
-                .seat-num { background: rgba(59, 130, 246, 0.1); color: #60a5fa; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-family: monospace; }
-                .p-name { color: #f8fafc; font-weight: 600; }
-                .p-cnic { font-family: monospace; color: #94a3b8; }
+                .seat-num { background: var(--primary-light); color: #a5b4fc; padding: 2px 8px; border-radius: var(--radius-sm); font-weight: 700; font-family: monospace; font-size: 12px; }
+                .p-name { color: var(--foreground); font-weight: 600; }
+                .p-cnic { font-family: monospace; color: var(--text-secondary); font-size: 12px; }
                 
-                .status-badge { padding: 4px 12px; border-radius: 100px; font-size: 11px; font-weight: 700; text-transform: uppercase; width: fit-content; }
-                .status-badge.active { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-                .status-badge.in-progress { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-                .status-badge.completed { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-                .status-badge.cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-                
-                .loading-text { color: #94a3b8; text-align: center; padding: 40px; font-style: italic; }
-                .empty-text { color: #64748b; text-align: center; padding: 40px; }
+                .loading-text { color: var(--text-muted); text-align: center; padding: 32px; font-style: italic; }
+                .empty-text { color: var(--text-secondary); text-align: center; padding: 32px; }
                 
                 .w-full { width: 100%; }
             `}</style>

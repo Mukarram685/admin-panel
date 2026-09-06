@@ -1,18 +1,22 @@
 .card {
-    padding: 24px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    min-width: 260px;
+    min-width: 220px;
     flex: 1;
     position: relative;
     overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background: rgba(17, 24, 39, 0.7);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.45);
+    border-color: rgba(99, 102, 241, 0.3);
 }
 
 .header {
@@ -22,54 +26,69 @@
 }
 
 .title {
-    font-size: 13px;
-    color: #94a3b8;
-    font-weight: 600;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.06em;
 }
 
 .iconWrapper {
-    background: rgba(255, 255, 255, 0.05);
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
+    background: var(--primary-light);
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--primary);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.card:hover .iconWrapper {
+    transform: scale(1.05);
+    background: rgba(99, 102, 241, 0.25);
+    color: #ffffff;
+}
+
+.body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .value {
-    font-size: 36px;
+    font-size: 26px;
     font-weight: 800;
-    color: white;
-    letter-spacing: -0.02em;
-    margin: 4px 0;
+    color: var(--foreground);
+    letter-spacing: -0.03em;
 }
 
 .trend {
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    border-radius: 100px;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 9999px;
     width: fit-content;
+    letter-spacing: 0.01em;
 }
 
 .trendIcon {
-    font-size: 16px;
+    flex-shrink: 0;
 }
 
 .trendUp {
-    background: rgba(16, 185, 129, 0.1);
-    color: #10b981;
+    background: var(--success-light);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .trendDown {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    background: var(--danger-light);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.2);
 }

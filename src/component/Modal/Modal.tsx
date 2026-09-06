@@ -1,4 +1,5 @@
 import React from 'react';
+import { X } from 'lucide-react';
 import styles from './Modal.module.css';
 
 interface Props {
@@ -17,7 +18,9 @@ export default function Modal({ isOpen, onClose, title, children, width }: Props
             <div className={styles.modal} style={width ? { maxWidth: width } : {}} onClick={e => e.stopPropagation()}>
                 <div className={styles.header}>
                     <h3 className={styles.title}>{title}</h3>
-                    <button className={styles.close} onClick={onClose}>&times;</button>
+                    <button className={styles.close} onClick={onClose} aria-label="Close modal">
+                        <X size={18} />
+                    </button>
                 </div>
                 {children}
             </div>
