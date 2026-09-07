@@ -90,9 +90,14 @@ export default function BookingsPage() {
                     display: flex;
                     flex-direction: column;
                     gap: 24px;
+                    width: 100%;
+                    max-width: 100%;
+                    min-width: 0;
+                    box-sizing: border-box;
                 }
                 .page-header { 
                     margin-bottom: 4px; 
+                    width: 100%;
                 }
                 .page-title { 
                     font-size: 26px; 
@@ -109,8 +114,16 @@ export default function BookingsPage() {
                 
                 .summary-grid { 
                     display: grid; 
-                    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
-                    gap: 20px; 
+                    grid-template-columns: repeat(2, minmax(0, 1fr)); 
+                    gap: 16px; 
+                    width: 100%;
+                    box-sizing: border-box;
+                }
+
+                @media (max-width: 640px) {
+                    .summary-grid {
+                        grid-template-columns: 1fr;
+                    }
                 }
                 
                 .loading-state { 
@@ -122,6 +135,7 @@ export default function BookingsPage() {
                     gap: 16px;
                     color: var(--text-muted); 
                     font-size: 14px; 
+                    width: 100%;
                 }
 
                 .spin-icon {
@@ -141,6 +155,8 @@ export default function BookingsPage() {
                     align-items: flex-start;
                     border: 1px solid rgba(99, 102, 241, 0.2);
                     background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(30, 27, 75, 0.25));
+                    width: 100%;
+                    box-sizing: border-box;
                 }
 
                 .privacy-icon-box {

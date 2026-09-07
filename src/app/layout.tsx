@@ -18,11 +18,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <div style={{ display: "flex", minHeight: "100vh" }}>
-          <AuthWrapper>
-            {children}
-          </AuthWrapper>
-        </div>
+        <AuthWrapper>
+          {children}
+        </AuthWrapper>
       </body>
     </html>
   );

@@ -9,7 +9,15 @@ import {
     Sparkles,
     Users,
     Tag,
-    Building2
+    Building2,
+    Wifi,
+    Zap,
+    Tv,
+    Moon,
+    Droplets,
+    Coffee,
+    Check,
+    Loader2
 } from "lucide-react";
 import { fetchAPI } from "@/utils/api";
 import DataTable from "@/component/DataTable/DataTable";
@@ -26,13 +34,44 @@ export default function BusesPage() {
     const [companies, setCompanies] = useState<any[]>([]);
     const [selectedCompanyId, setSelectedCompanyId] = useState("");
 
+    // Dynamic Amenities
+    const [availableAmenities, setAvailableAmenities] = useState<string[]>([
+        "WiFi", "Charging Port", "TV", "Blanket", "Water", "Snacks"
+    ]);
+    const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+    const [loadingAmenities, setLoadingAmenities] = useState(false);
+
     const [formData, setFormData] = useState({
         busNumber: "",
         registrationNumber: "",
         type: "AC",
         totalSeats: 40,
-        amenities: "",
     });
+
+    const getAmenityIcon = (name: string) => {
+        const n = (name || "").toLowerCase();
+        if (n.includes("wifi")) return <Wifi size={13} />;
+        if (n.includes("charg") || n.includes("plug") || n.includes("power") || n.includes("usb")) return <Zap size={13} />;
+        if (n.includes("tv") || n.includes("screen") || n.includes("movie")) return <Tv size={13} />;
+        if (n.includes("blanket") || n.includes("pillow") || n.includes("sleep")) return <Moon size={13} />;
+        if (n.includes("water") || n.includes("drink")) return <Droplets size={13} />;
+        if (n.includes("snack") || n.includes("food") || n.includes("meal") || n.includes("tea") || n.includes("coffee")) return <Coffee size={13} />;
+        return <Sparkles size={13} />;
+    };
+
+    const loadAmenities = async () => {
+        try {
+            setLoadingAmenities(true);
+            const res = await fetchAPI("/buses/amenities");
+            if (res.amenities && Array.isArray(res.amenities) && res.amenities.length > 0) {
+                setAvailableAmenities(res.amenities);
+            }
+        } catch (err) {
+            console.warn("Could not fetch backend amenities, using default dynamic set:", err);
+        } finally {
+            setLoadingAmenities(false);
+        }
+    };
 
     const loadBuses = async () => {
         try {
@@ -62,7 +101,16 @@ export default function BusesPage() {
             }
         }
         loadBuses();
+        loadAmenities();
     }, []);
+
+    const toggleAmenity = (amenity: string) => {
+        setSelectedAmenities(prev => 
+            prev.includes(amenity)
+                ? prev.filter(a => a !== amenity)
+                : [...prev, amenity]
+        );
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -75,9 +123,7 @@ export default function BusesPage() {
 
             const bodyData = {
                 ...formData,
-                amenities: typeof formData.amenities === "string"
-                    ? formData.amenities.split(',').map(s => s.trim()).filter(Boolean)
-                    : formData.amenities,
+                amenities: selectedAmenities,
                 ...(companyId ? { company: companyId } : {})
             };
             
@@ -90,7 +136,8 @@ export default function BusesPage() {
             });
 
             setIsModalOpen(false);
-            setFormData({ busNumber: "", registrationNumber: "", type: "AC", totalSeats: 40, amenities: "" });
+            setFormData({ busNumber: "", registrationNumber: "", type: "AC", totalSeats: 40 });
+            setSelectedAmenities([]);
             setSelectedBus(null);
             if (user?.role === "superadmin") setSelectedCompanyId("");
             loadBuses();
@@ -116,8 +163,8 @@ export default function BusesPage() {
             registrationNumber: bus.registrationNumber || "",
             type: bus.type || "AC",
             totalSeats: bus.totalSeats || 40,
-            amenities: (bus.amenities || []).join(", "),
         });
+        setSelectedAmenities(Array.isArray(bus.amenities) ? bus.amenities : []);
         setIsModalOpen(true);
     };
 
@@ -127,7 +174,7 @@ export default function BusesPage() {
             header: "Bus Number",
             render: (r: any) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a5b4fc' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a5b4fc', flexShrink: 0 }}>
                         <BusFront size={14} />
                     </div>
                     <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{r.busNumber}</span>
@@ -153,11 +200,34 @@ export default function BusesPage() {
             key: "totalSeats", 
             header: "Capacity", 
             render: (r: any) => (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', whiteSpace: 'nowrap' }}>
                     <Users size={13} color="var(--text-secondary)" />
                     <span>{r.totalSeats} seats</span>
                 </div>
             )
+        },
+        {
+            key: "amenities",
+            header: "Amenities",
+            render: (r: any) => {
+                const list = Array.isArray(r.amenities) ? r.amenities : [];
+                if (list.length === 0) return <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>Standard</span>;
+                return (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '200px' }}>
+                        {list.slice(0, 2).map((a: string, i: number) => (
+                            <span key={i} className="badge badge-primary" style={{ fontSize: '10px', padding: '2px 6px' }}>
+                                {getAmenityIcon(a)}
+                                <span>{a}</span>
+                            </span>
+                        ))}
+                        {list.length > 2 && (
+                            <span className="badge badge-info" style={{ fontSize: '10px', padding: '2px 6px' }}>
+                                +{list.length - 2} more
+                            </span>
+                        )}
+                    </div>
+                );
+            }
         },
         {
             key: "status", 
@@ -200,12 +270,13 @@ export default function BusesPage() {
             <header className="page-header">
                 <div>
                     <h1 className="page-title">Fleet Management</h1>
-                    <p className="page-subtitle">Track vehicles, bus specifications, seating capacity, and configurations.</p>
+                    <p className="page-subtitle">Track vehicles, bus specifications, seating capacity, and onboard amenities.</p>
                 </div>
                 <button 
                     onClick={() => { 
                         setSelectedBus(null); 
-                        setFormData({ busNumber: "", registrationNumber: "", type: "AC", totalSeats: 40, amenities: "" }); 
+                        setFormData({ busNumber: "", registrationNumber: "", type: "AC", totalSeats: 40 }); 
+                        setSelectedAmenities([]);
                         setIsModalOpen(true); 
                     }} 
                     className="btn-primary"
@@ -281,14 +352,39 @@ export default function BusesPage() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Onboard Amenities (comma separated)</label>
-                        <input 
-                            type="text" 
-                            className="form-input" 
-                            value={formData.amenities} 
-                            onChange={e => setFormData({ ...formData, amenities: e.target.value })} 
-                            placeholder="WiFi, Charging Port, AC, Refreshments..." 
-                        />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <label className="form-label" style={{ margin: 0 }}>Onboard Amenities</label>
+                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                {selectedAmenities.length} selected
+                            </span>
+                        </div>
+                        
+                        {loadingAmenities ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', color: 'var(--text-muted)', fontSize: '12px' }}>
+                                <Loader2 size={16} className="spin-icon" />
+                                <span>Loading amenities from backend...</span>
+                            </div>
+                        ) : (
+                            <div className="amenities-grid">
+                                {availableAmenities.map((amenity) => {
+                                    const isSelected = selectedAmenities.includes(amenity);
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={amenity}
+                                            onClick={() => toggleAmenity(amenity)}
+                                            className={`amenity-chip ${isSelected ? 'selected' : ''}`}
+                                        >
+                                            <span className="amenity-icon">
+                                                {getAmenityIcon(amenity)}
+                                            </span>
+                                            <span className="amenity-text">{amenity}</span>
+                                            {isSelected && <Check size={13} className="amenity-check" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     {user?.role === "superadmin" && (
@@ -323,11 +419,19 @@ export default function BusesPage() {
                     display: flex;
                     flex-direction: column;
                     gap: 24px;
+                    width: 100%;
+                    max-width: 100%;
+                    min-width: 0;
+                    box-sizing: border-box;
                 }
                 .page-header {
                     display: flex;
                     justify-content: space-between;
-                    align-items: flex-end;
+                    align-items: center;
+                    width: 100%;
+                    gap: 16px;
+                    flex-wrap: wrap;
+                    box-sizing: border-box;
                 }
                 .page-title {
                     font-size: 26px;
@@ -346,6 +450,56 @@ export default function BusesPage() {
                     grid-template-columns: 1fr 1fr;
                     gap: 16px;
                 }
+                .amenities-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                    gap: 8px;
+                    margin-top: 4px;
+                }
+                .amenity-chip {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    background: rgba(15, 23, 42, 0.6);
+                    border: 1px solid var(--card-border);
+                    border-radius: var(--radius-md);
+                    color: var(--text-muted);
+                    font-size: 12.5px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    user-select: none;
+                    text-align: left;
+                }
+                .amenity-chip:hover {
+                    background: var(--hover-bg);
+                    color: var(--foreground);
+                    border-color: rgba(99, 102, 241, 0.3);
+                }
+                .amenity-chip.selected {
+                    background: var(--primary-light);
+                    border-color: var(--primary);
+                    color: #a5b4fc;
+                    font-weight: 600;
+                    box-shadow: 0 0 12px rgba(99, 102, 241, 0.2);
+                }
+                .amenity-icon {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                }
+                .amenity-text {
+                    flex: 1;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                .amenity-check {
+                    color: var(--primary);
+                    flex-shrink: 0;
+                }
                 .modal-actions {
                     display: flex;
                     justify-content: flex-end;
@@ -360,6 +514,12 @@ export default function BusesPage() {
                     font-size: 13px;
                     margin-bottom: 16px;
                     border: 1px solid rgba(239, 68, 68, 0.25);
+                }
+                .spin-icon {
+                    animation: spin 1s linear infinite;
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
                 }
             `}</style>
         </main>

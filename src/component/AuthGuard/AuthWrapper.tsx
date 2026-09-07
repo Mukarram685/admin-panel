@@ -70,14 +70,14 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
 
     // Render full dashboard layout
     return (
-        <>
+        <div style={{ display: "flex", flexDirection: "column", width: "100%", minHeight: "100vh", overflowX: "hidden", position: "relative" }}>
             <Header />
-            <div style={{ display: "flex", marginTop: "var(--header-height)", minHeight: "calc(100vh - var(--header-height))" }}>
+            <div style={{ display: "flex", marginTop: "var(--header-height)", flex: 1, width: "100%", minWidth: 0, minHeight: "calc(100vh - var(--header-height))" }}>
                 <Sidebar />
-                <main style={{ flex: 1, padding: "28px 32px", overflowY: "auto", minWidth: 0 }}>
+                <main style={{ flex: 1, minWidth: 0, width: "calc(100% - var(--sidebar-width))", maxWidth: "calc(100% - var(--sidebar-width))", padding: "24px 28px", boxSizing: "border-box", overflowY: "auto", overflowX: "hidden" }}>
                     {children}
                 </main>
             </div>
-        </>
+        </div>
     );
 }

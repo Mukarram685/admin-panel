@@ -608,11 +608,19 @@ export default function SchedulesPage() {
                     display: flex;
                     flex-direction: column;
                     gap: 24px;
+                    width: 100%;
+                    max-width: 100%;
+                    min-width: 0;
+                    box-sizing: border-box;
                 }
                 .page-header {
                     display: flex;
                     justify-content: space-between;
-                    align-items: flex-end;
+                    align-items: center;
+                    width: 100%;
+                    gap: 16px;
+                    flex-wrap: wrap;
+                    box-sizing: border-box;
                 }
                 .page-title {
                     font-size: 26px;
