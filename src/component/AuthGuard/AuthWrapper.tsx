@@ -12,15 +12,27 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     const router = useRouter();
     const pathname = usePathname();
 
-    const routePermissions: Record<string, string[]> = {
-        "/": ["superadmin", "companyadmin", "operator"],
-        "/companies": ["superadmin"],
-        "/operators": ["superadmin", "companyadmin"],
-        "/buses": ["superadmin", "companyadmin"],
-        "/routes": ["superadmin", "companyadmin"],
-        "/schedules": ["superadmin", "companyadmin", "operator"],
-        "/bookings": ["superadmin", "companyadmin"],
-        "/reports": ["superadmin", "companyadmin"],
+    const isRoutePermitted = (user: any, path: string) => {
+        const role = user?.role;
+        const opType = user?.operatorType;
+
+        if (path === "/login") return true;
+        if (role === "superadmin") return true;
+        if (role === "companyadmin") {
+            return path !== "/companies";
+        }
+        if (role === "operator") {
+            if (path === "/" || path === "/schedules") return true;
+            if (opType === "company_manager") {
+                return ["/", "/operators", "/buses", "/routes", "/schedules"].includes(path);
+            }
+            if (opType === "city_manager") {
+                return ["/", "/operators", "/schedules"].includes(path);
+            }
+            // trip_operator
+            return ["/", "/schedules"].includes(path);
+        }
+        return false;
     };
 
     useEffect(() => {
@@ -38,10 +50,9 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
         if (token && userStr) {
             try {
                 const user = JSON.parse(userStr);
-                const allowedRoles = routePermissions[pathname];
                 
-                if (allowedRoles && !allowedRoles.includes(user.role)) {
-                    console.warn(`Unauthorized access attempt to ${pathname} by ${user.role}`);
+                if (!isRoutePermitted(user, pathname)) {
+                    console.warn(`Unauthorized access attempt to ${pathname} by ${user.role} (${user.operatorType})`);
                     router.push("/");
                     return;
                 }

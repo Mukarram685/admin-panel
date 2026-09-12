@@ -27,6 +27,7 @@ export default function Header({ isSidebarOpen = false, onToggleSidebar }: Heade
     const pathname = usePathname();
     const router = useRouter();
     const [userRole, setUserRole] = useState<string>("superadmin");
+    const [userOperatorType, setUserOperatorType] = useState<string>("");
     const [userName, setUserName] = useState<string>("Admin");
 
     useEffect(() => {
@@ -35,6 +36,7 @@ export default function Header({ isSidebarOpen = false, onToggleSidebar }: Heade
             try {
                 const user = JSON.parse(userStr);
                 setUserRole(user.role || "superadmin");
+                setUserOperatorType(user.operatorType || "");
                 setUserName(user.name || "Admin");
             } catch (e) {
                 console.error("Failed to parse user from localStorage");
@@ -59,19 +61,19 @@ export default function Header({ isSidebarOpen = false, onToggleSidebar }: Heade
             label: "Operators", 
             path: "/operators", 
             icon: UserCog,
-            roles: ["superadmin", "companyadmin"]
+            roles: ["superadmin", "companyadmin", "operator"]
         },
         { 
             label: "Buses", 
             path: "/buses", 
             icon: BusFront,
-            roles: ["superadmin", "companyadmin"]
+            roles: ["superadmin", "companyadmin", "operator"]
         },
         { 
             label: "Routes", 
             path: "/routes", 
             icon: MapPin,
-            roles: ["superadmin", "companyadmin"]
+            roles: ["superadmin", "companyadmin", "operator"]
         },
         { 
             label: "Schedules", 
@@ -94,8 +96,21 @@ export default function Header({ isSidebarOpen = false, onToggleSidebar }: Heade
     ];
 
     const visibleItems = navItems.filter(item => {
-        if (!item.roles) return true;
-        return item.roles.includes(userRole);
+        if (userRole === "superadmin") return true;
+        if (userRole === "companyadmin") {
+            return item.path !== "/companies";
+        }
+        if (userRole === "operator") {
+            if (userOperatorType === "company_manager") {
+                return ["/", "/operators", "/buses", "/routes", "/schedules"].includes(item.path);
+            }
+            if (userOperatorType === "city_manager") {
+                return ["/", "/operators", "/schedules"].includes(item.path);
+            }
+            // trip_operator
+            return ["/", "/schedules"].includes(item.path);
+        }
+        return false;
     });
 
     if (pathname === "/login") return null;
@@ -158,7 +173,7 @@ export default function Header({ isSidebarOpen = false, onToggleSidebar }: Heade
                         <span className={styles.userName}>{userName}</span>
                         <span className={styles.userRole}>
                             <ShieldCheck size={11} />
-                            {userRole}
+                            {userRole === 'operator' && userOperatorType ? userOperatorType.replace('_', ' ') : userRole}
                         </span>
                     </div>
                     <button onClick={handleLogout} className={styles.logoutBtn} title="Sign out of panel">

@@ -73,7 +73,7 @@ export default function SchedulesPage() {
             const userData = userStr ? JSON.parse(userStr) : null;
             
             let res;
-            if (userData?.role === 'operator') {
+            if (userData?.role === 'operator' && (!userData?.operatorType || userData?.operatorType === 'trip_operator')) {
                 res = await fetchAPI("/operator/my-trips");
             } else {
                 res = await fetchAPI("/schedules/company");
@@ -87,12 +87,12 @@ export default function SchedulesPage() {
     };
 
     const loadDropdowns = async () => {
-        if (user?.role === 'operator') return;
+        if (user?.role === 'operator' && (!user?.operatorType || user?.operatorType === 'trip_operator')) return;
         try {
             const [routesRes, busesRes, operatorsRes] = await Promise.all([
-                fetchAPI("/routes/allRoutes"),
-                fetchAPI("/buses/company"),
-                fetchAPI("/operator/company")
+                fetchAPI("/routes/allRoutes").catch(() => ({ routes: [] })),
+                fetchAPI("/buses/company").catch(() => ({ buses: [] })),
+                fetchAPI("/operator/company").catch(() => ({ operators: [] }))
             ]);
             setAvailableRoutes(routesRes.data || routesRes.routes || []);
             setAvailableBuses(busesRes.buses || busesRes.data || []);
@@ -105,7 +105,7 @@ export default function SchedulesPage() {
     useEffect(() => {
         if (user) {
             loadSchedules();
-            if (user.role !== 'operator') loadDropdowns();
+            if (user.role !== 'operator' || user.operatorType !== 'trip_operator') loadDropdowns();
         }
     }, [user]);
 
@@ -286,55 +286,68 @@ export default function SchedulesPage() {
             )
         },
         {
-            key: "actions", header: "Actions", render: (r: any) => (
-                <div style={{ display: 'flex', gap: '6px' }}>
-                    <button onClick={() => handleViewDetails(r)} className="btn-icon-primary" title="View Manifest">
-                        <FileText size={13} />
-                        <span>Manifest</span>
-                    </button>
-                    {user?.role !== 'operator' && (
-                        <button 
-                            onClick={() => handleOpenEdit(r)} 
-                            className="btn-icon-primary"
-                            title="Edit Assignment"
-                            disabled={r.status === 'completed' || r.status === 'cancelled'}
-                            style={{ opacity: (r.status === 'completed' || r.status === 'cancelled') ? 0.4 : 1 }}
-                        >
-                            <Edit3 size={13} />
-                            <span>Edit</span>
+            key: "actions", header: "Actions", render: (r: any) => {
+                const canEditAssignment = user?.role === 'superadmin' || user?.role === 'companyadmin' || user?.operatorType === 'company_manager' || user?.operatorType === 'city_manager';
+                const isTripOperator = user?.role === 'operator' && (!user?.operatorType || user?.operatorType === 'trip_operator');
+
+                return (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        <button onClick={() => handleViewDetails(r)} className="btn-icon-primary" title="View Manifest">
+                            <FileText size={13} />
+                            <span>Manifest</span>
                         </button>
-                    )}
-                    {user?.role === 'operator' && (
-                        <>
-                            {r.status === 'active' && (
-                                <button onClick={() => handleStartTrip(r._id)} className="btn-icon-success" title="Start Departure">
-                                    <Play size={13} />
-                                    <span>Start</span>
-                                </button>
-                            )}
-                            {r.status === 'in-progress' && (
-                                <button onClick={() => handleCompleteTrip(r._id)} className="btn-icon-success" title="Complete Journey">
-                                    <CheckCircle2 size={13} />
-                                    <span>Complete</span>
-                                </button>
-                            )}
-                        </>
-                    )}
-                </div>
-            )
+                        {canEditAssignment && (
+                            <button 
+                                onClick={() => handleOpenEdit(r)} 
+                                className="btn-icon-primary"
+                                title={user?.operatorType === 'city_manager' ? "Swap Driver / Bus" : "Edit Assignment"}
+                                disabled={r.status === 'completed' || r.status === 'cancelled'}
+                                style={{ opacity: (r.status === 'completed' || r.status === 'cancelled') ? 0.4 : 1 }}
+                            >
+                                <Edit3 size={13} />
+                                <span>{user?.operatorType === 'city_manager' ? "Swap" : "Edit"}</span>
+                            </button>
+                        )}
+                        {isTripOperator && (
+                            <>
+                                {r.status === 'active' && (
+                                    <button onClick={() => handleStartTrip(r._id)} className="btn-icon-success" title="Start Departure">
+                                        <Play size={13} />
+                                        <span>Start</span>
+                                    </button>
+                                )}
+                                {r.status === 'in-progress' && (
+                                    <button onClick={() => handleCompleteTrip(r._id)} className="btn-icon-success" title="Complete Journey">
+                                        <CheckCircle2 size={13} />
+                                        <span>Complete</span>
+                                    </button>
+                                )}
+                            </>
+                        )}
+                    </div>
+                );
+            }
         }
     ];
+
+    const canDispatchSchedule = user?.role === 'superadmin' || user?.role === 'companyadmin' || user?.operatorType === 'company_manager';
 
     return (
         <main className="page-container">
             <header className="page-header">
                 <div>
-                    <h1 className="page-title">{user?.role === 'operator' ? "Assigned Duty Departures" : "Schedules & Dispatching"}</h1>
+                    <h1 className="page-title">
+                        {user?.operatorType === 'city_manager' ? "Terminal Departures & Dispatch" :
+                         user?.operatorType === 'company_manager' ? "Fleet Schedules & Network Dispatch" :
+                         user?.role === 'operator' ? "Assigned Duty Departures" : "Schedules & Dispatching"}
+                    </h1>
                     <p className="page-subtitle">
-                        {user?.role === 'operator' ? "View passenger manifests, departure schedules, and update trip milestones." : "Coordinate vehicle departures, assign drivers, and manage route timings."}
+                        {user?.operatorType === 'city_manager' ? `Coordinate vehicle departures and swap conductors/buses for ${user?.operatorScope?.cities?.join(", ") || "your terminal"}.` :
+                         user?.role === 'operator' ? "View passenger manifests, departure schedules, and update trip milestones." :
+                         "Coordinate vehicle departures, assign drivers, and manage route timings."}
                     </p>
                 </div>
-                {user?.role !== 'operator' && (
+                {canDispatchSchedule && (
                     <button onClick={() => setIsModalOpen(true)} className="btn-primary">
                         <CalendarPlus size={15} />
                         <span>Dispatch Schedule</span>
@@ -343,7 +356,8 @@ export default function SchedulesPage() {
             </header>
 
             <DataTable 
-                title={user?.role === 'operator' ? "Assigned Shifts" : "Upcoming Departures"} 
+                title={user?.operatorType === 'city_manager' ? "Terminal Shifts" :
+                       user?.role === 'operator' ? "Assigned Shifts" : "Upcoming Departures"} 
                 columns={columns} 
                 data={schedules} 
                 loading={loading} 

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   DollarSign,
@@ -17,7 +18,9 @@ import {
   Mail,
   User,
   Loader2,
-  Info
+  Info,
+  CalendarPlus,
+  UserPlus
 } from "lucide-react";
 import DashboardCard from "@/component/DashboardCard/DashboardCard";
 import DataTable from "@/component/DataTable/DataTable";
@@ -26,16 +29,19 @@ import { fetchAPI } from "@/utils/api";
 import styles from "./page.module.css";
 
 export default function Home() {
+  const router = useRouter();
   const [stats, setStats] = useState({
     bookings: 0,
     revenue: 0,
     buses: 0,
     routes: 0,
+    operators: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [user, setUser] = useState<any>(null);
   const [trips, setTrips] = useState<any[]>([]);
+  const [companySchedules, setCompanySchedules] = useState<any[]>([]);
   const [selectedTrip, setSelectedTrip] = useState<any>(null);
   const [passengers, setPassengers] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,16 +72,65 @@ export default function Home() {
         setUser(userData);
 
         if (userData.role === "operator") {
-          const res = await fetchAPI("/operator/my-trips");
-          const tripList = res.trips || [];
-          setTrips(tripList);
-          
-          setStats({
-            bookings: tripList.length,
-            revenue: 0,
-            buses: userData.operatorScope?.buses?.length || 0,
-            routes: userData.operatorScope?.cities?.length || 0,
-          });
+          if (userData.operatorType === "company_manager") {
+            // Company Manager: high-level company fleet, routes, schedules, personnel
+            const [busesRes, routesRes, schedulesRes, operatorsRes] = await Promise.all([
+              fetchAPI("/buses/company").catch(() => ({ buses: [] })),
+              fetchAPI("/routes/allRoutes").catch(() => ({ routes: [] })),
+              fetchAPI("/schedules/company").catch(() => ({ schedules: [] })),
+              fetchAPI("/operator/company").catch(() => ({ operators: [] })),
+            ]);
+
+            const busesList = busesRes.buses || busesRes.data || [];
+            const routesList = routesRes.routes || routesRes.data || [];
+            const schedulesList = schedulesRes.schedules || schedulesRes.data || [];
+            const operatorsList = operatorsRes.operators || operatorsRes.data || [];
+
+            setCompanySchedules(schedulesList);
+            setStats({
+              bookings: schedulesList.length,
+              revenue: 0,
+              buses: busesList.length,
+              routes: routesList.length,
+              operators: operatorsList.length,
+            });
+          } else if (userData.operatorType === "city_manager") {
+            // City Manager: terminal schedules and terminal crew
+            const [schedulesRes, operatorsRes] = await Promise.all([
+              fetchAPI("/schedules/company").catch(() => ({ schedules: [] })),
+              fetchAPI("/operator/company").catch(() => ({ operators: [] })),
+            ]);
+            const schedulesList = schedulesRes.schedules || schedulesRes.data || [];
+            const operatorsList = operatorsRes.operators || operatorsRes.data || [];
+            const myCities = userData.operatorScope?.cities || [];
+            
+            const citySchedules = schedulesList.filter((s: any) => {
+              if (!myCities.length) return true;
+              return myCities.includes(s.route?.fromCity) || myCities.includes(s.route?.toCity);
+            });
+
+            setTrips(citySchedules);
+            setStats({
+              bookings: citySchedules.length,
+              revenue: 0,
+              buses: userData.operatorScope?.buses?.length || 0,
+              routes: myCities.length || 1,
+              operators: operatorsList.length,
+            });
+          } else {
+            // Trip Operator (Conductor/Driver): specific assigned trips
+            const res = await fetchAPI("/operator/my-trips");
+            const tripList = res.trips || [];
+            setTrips(tripList);
+            
+            setStats({
+              bookings: tripList.length,
+              revenue: 0,
+              buses: userData.operatorScope?.buses?.length || 0,
+              routes: userData.operatorScope?.cities?.length || 0,
+              operators: 0,
+            });
+          }
         } else if (userData.role === "superadmin") {
           const [bookingsRes, busesRes, routesRes, companiesRes] = await Promise.all([
             fetchAPI("/bookings/company/all").catch(() => ({ bookings: [] })),
@@ -85,8 +140,8 @@ export default function Home() {
           ]);
 
           const bookingsList = bookingsRes.bookings || [];
-          const busesList = busesRes.buses || [];
-          const routesList = routesRes.routes || [];
+          const busesList = busesRes.buses || busesRes.data || [];
+          const routesList = routesRes.routes || routesRes.data || [];
           const companiesList = companiesRes.companies || [];
 
           const totalRev = bookingsList.reduce((acc: number, b: any) => {
@@ -99,19 +154,22 @@ export default function Home() {
             revenue: totalRev,
             buses: busesList.length,
             routes: routesList.length,
+            operators: 0,
           });
           setCompanies(companiesList);
         } else {
           // Company Admin
-          const [bookingsRes, busesRes, routesRes] = await Promise.all([
+          const [bookingsRes, busesRes, routesRes, operatorsRes] = await Promise.all([
             fetchAPI("/bookings/company/all").catch(() => ({ bookings: [] })),
             fetchAPI("/buses/company").catch(() => ({ buses: [] })),
             fetchAPI("/routes/allRoutes").catch(() => ({ routes: [] })),
+            fetchAPI("/operator/company").catch(() => ({ operators: [] })),
           ]);
 
           const bookingsList = bookingsRes.bookings || [];
-          const busesList = busesRes.buses || [];
-          const routesList = routesRes.routes || [];
+          const busesList = busesRes.buses || busesRes.data || [];
+          const routesList = routesRes.routes || routesRes.data || [];
+          const operatorsList = operatorsRes.operators || operatorsRes.data || [];
 
           const totalRev = bookingsList.reduce((acc: number, b: any) => {
               if (b.bookingStatus === 'cancelled' || b.bookingStatus === 'refunded' || b.status === 'cancelled') return acc;
@@ -123,6 +181,7 @@ export default function Home() {
             revenue: totalRev,
             buses: busesList.length,
             routes: routesList.length,
+            operators: operatorsList.length,
           });
         }
 
@@ -159,9 +218,10 @@ export default function Home() {
     }
   };
 
+  // Trip Operator columns (driver/conductor specific duty board)
   const tripColumns = [
     { key: "bus", header: "Bus", render: (row: any) => row.bus?.busNumber || "N/A" },
-    { key: "route", header: "Route", render: (row: any) => `${row.route?.fromCity} → ${row.route?.toCity}` },
+    { key: "route", header: "Route", render: (row: any) => `${row.route?.fromCity || ''} → ${row.route?.toCity || ''}` },
     { key: "departure", header: "Departure", render: (row: any) => `${new Date(row.departureDate).toLocaleDateString()} at ${row.departureTime}` },
     { key: "status", header: "Status", render: (row: any) => (
       <span className={`badge ${row.status === 'completed' ? 'badge-success' : row.status === 'active' ? 'badge-primary' : 'badge-error'}`}>
@@ -187,16 +247,83 @@ export default function Home() {
     )}
   ];
 
+  // Company Manager & City Manager schedule oversight columns
+  const companyScheduleColumns = [
+    { key: "bus", header: "Bus & Layout", render: (row: any) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a5b4fc', flexShrink: 0 }}>
+          <BusFront size={14} />
+        </div>
+        <div>
+          <div style={{ fontWeight: 600, color: 'var(--foreground)' }}>{row.bus?.busNumber || "N/A"}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{row.bus?.type || "Standard"} ({row.bus?.totalSeats || 40} seats)</div>
+        </div>
+      </div>
+    )},
+    { key: "route", header: "Route Line", render: (row: any) => (
+      <div>
+        <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>{row.route?.fromCity || 'Origin'} → {row.route?.toCity || 'Destination'}</span>
+        {row.route?.duration && <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>⏱ {row.route?.duration}</div>}
+      </div>
+    )},
+    { key: "departure", header: "Departure Time", render: (row: any) => (
+      <div>
+        <div style={{ fontWeight: 500, color: 'var(--foreground)' }}>{new Date(row.departureDate).toLocaleDateString()}</div>
+        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>🕒 {row.departureTime} - {row.arrivalTime || 'TBD'}</div>
+      </div>
+    )},
+    { key: "operator", header: "Assigned Conductor", render: (row: any) => (
+      row.operator ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <User size={12} style={{ color: 'var(--primary)' }} />
+          <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>{row.operator?.name}</span>
+        </div>
+      ) : (
+        <span className="badge badge-warning">Unassigned</span>
+      )
+    )},
+    { key: "fare", header: "Fare", render: (row: any) => (
+      <span style={{ fontWeight: 600, color: 'var(--foreground)' }}>PKR {row.fare?.toLocaleString() || 0}</span>
+    )},
+    { key: "status", header: "Status", render: (row: any) => (
+      <span className={`badge ${row.status === 'completed' ? 'badge-success' : row.status === 'active' || row.status === 'scheduled' ? 'badge-primary' : 'badge-error'}`}>
+        {row.status === 'completed' && <CheckCircle2 size={11} />}
+        {(row.status === 'active' || row.status === 'scheduled') && <Clock size={11} />}
+        {row.status !== 'completed' && row.status !== 'active' && row.status !== 'scheduled' && <AlertCircle size={11} />}
+        <span style={{ textTransform: 'capitalize' }}>{row.status}</span>
+      </span>
+    )},
+    { key: "actions", header: "Actions", render: (row: any) => (
+      <div className={styles.actions}>
+        <button className="btn-icon-primary" onClick={() => handleViewPassengers(row)} title="View Passenger Manifest">
+          <Users size={13} />
+          <span>Manifest</span>
+        </button>
+        <button className="btn-icon-secondary" onClick={() => router.push("/schedules")} title="Manage Schedules">
+          <CalendarClock size={13} />
+          <span>Manage</span>
+        </button>
+      </div>
+    )}
+  ];
+
+  const isCompanyManager = user?.role === "operator" && user?.operatorType === "company_manager";
+  const isCityManager = user?.role === "operator" && user?.operatorType === "city_manager";
+
   return (
     <main className={styles.container}>
       <header className={styles.header}>
         <h1 className={styles.title}>
             {user?.role === "superadmin" ? "Global System Analytics" : 
+             isCompanyManager ? "Company Operations Command Center" :
+             isCityManager ? "Terminal Operations Board" :
              user?.role === "operator" ? "Duty Operations Board" : 
              "Company Performance Overview"}
         </h1>
         <p className={styles.subtitle}>
             {user?.role === "superadmin" ? "Real-time logistics, partners, and network telemetry." : 
+             isCompanyManager ? "Real-time fleet operations, route networks, departure schedules, and personnel strength." :
+             isCityManager ? `Terminal schedules and conductor management for ${user?.operatorScope?.cities?.join(", ") || "assigned terminal"}.` :
              user?.role === "operator" ? "Manage assigned departures, passenger manifests, and route milestones." : 
              "Summary of bookings, operational fleet, and revenue performance."}
         </p>
@@ -211,7 +338,9 @@ export default function Home() {
                 <Building2 size={12} />
                 Affiliated Company
               </span>
-              <span className={styles.infoValue}>{user?.company?.name || "Independent"}</span>
+              <span className={styles.infoValue}>
+                {typeof user?.company === 'object' ? user?.company?.name : (user?.company || "Partner Fleet")}
+              </span>
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>
@@ -230,7 +359,7 @@ export default function Home() {
           </div>
           <div className={styles.operatorBadge}>
             <ShieldCheck size={13} />
-            <span>{user?.operatorType?.replace('_', ' ').toUpperCase() || 'TRIP OPERATOR'}</span>
+            <span>{user?.operatorType ? user.operatorType.replace('_', ' ').toUpperCase() : 'TRIP OPERATOR'}</span>
           </div>
         </section>
       )}
@@ -242,17 +371,68 @@ export default function Home() {
         </div>
       ) : (
         <div className={styles.content}>
+          {/* Quick Action Shortcuts for Company Manager */}
+          {isCompanyManager && (
+            <div className={styles.quickActionsGrid}>
+              <button className={styles.quickActionCard} onClick={() => router.push('/buses')}>
+                <div className={styles.quickActionIcon}>
+                  <BusFront size={20} />
+                </div>
+                <div className={styles.quickActionInfo}>
+                  <h4 className={styles.quickActionTitle}>Company Fleet</h4>
+                  <p className={styles.quickActionDesc}>Register and view company buses</p>
+                </div>
+              </button>
+
+              <button className={styles.quickActionCard} onClick={() => router.push('/routes')}>
+                <div className={styles.quickActionIcon}>
+                  <Route size={20} />
+                </div>
+                <div className={styles.quickActionInfo}>
+                  <h4 className={styles.quickActionTitle}>Network Routes</h4>
+                  <p className={styles.quickActionDesc}>Manage intercity travel corridors</p>
+                </div>
+              </button>
+
+              <button className={styles.quickActionCard} onClick={() => router.push('/schedules')}>
+                <div className={styles.quickActionIcon}>
+                  <CalendarPlus size={20} />
+                </div>
+                <div className={styles.quickActionInfo}>
+                  <h4 className={styles.quickActionTitle}>Dispatch Schedules</h4>
+                  <p className={styles.quickActionDesc}>Create trips and assign conductors</p>
+                </div>
+              </button>
+
+              <button className={styles.quickActionCard} onClick={() => router.push('/operators')}>
+                <div className={styles.quickActionIcon}>
+                  <UserPlus size={20} />
+                </div>
+                <div className={styles.quickActionInfo}>
+                  <h4 className={styles.quickActionTitle}>Operator Staff</h4>
+                  <p className={styles.quickActionDesc}>Supervise city managers & drivers</p>
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Stats KPI Cards */}
           <div className={styles.grid}>
             <DashboardCard 
                 title={user?.role === 'superadmin' ? "Active Companies" : 
+                       isCompanyManager ? "Scheduled Trips" :
+                       isCityManager ? "Terminal Trips" :
                        user?.role === 'operator' ? "My Assigned Trips" : 
                        "Total Bookings"} 
                 value={stats.bookings.toString()} 
                 trend={user?.role === 'superadmin' ? "Partner Businesses" : 
+                       isCompanyManager ? "Active Departures" :
+                       isCityManager ? "City Schedules" :
                        user?.role === 'operator' ? "Current Schedule" : 
                        "Confirmed Trips"} 
                 trendType="up"
-                icon={user?.role === 'superadmin' ? <Building2 size={18} /> : user?.role === 'operator' ? <CalendarClock size={18} /> : <Ticket size={18} />}
+                icon={user?.role === 'superadmin' ? <Building2 size={18} /> : 
+                      (user?.role === 'operator' ? <CalendarClock size={18} /> : <Ticket size={18} />)}
             />
             {user?.role !== 'operator' && (
               <DashboardCard 
@@ -265,15 +445,33 @@ export default function Home() {
             )}
             <DashboardCard 
                 title={user?.role === 'superadmin' ? "Global Fleet Size" : 
-                       user?.operatorType === 'city_manager' ? "Assigned Cities" : "Operational Fleet"} 
-                value={user?.role === 'superadmin' ? stats.buses.toString() : 
-                       (user?.operatorType === 'city_manager' ? stats.routes.toString() : stats.buses.toString())} 
-                trend="Active Fleet" 
+                       isCityManager ? "Terminal Buses" : "Operational Fleet"} 
+                value={stats.buses.toString()} 
+                trend="Active Fleet Units" 
                 trendType="up"
-                icon={user?.operatorType === 'city_manager' ? <Route size={18} /> : <BusFront size={18} />}
+                icon={<BusFront size={18} />}
             />
+            {(isCompanyManager || isCityManager || user?.role === 'superadmin' || user?.role === 'companyadmin') && (
+              <DashboardCard 
+                  title={isCityManager ? "Assigned Cities" : "Network Routes"} 
+                  value={stats.routes.toString()} 
+                  trend="Connected Lines" 
+                  trendType="up"
+                  icon={<Route size={18} />}
+              />
+            )}
+            {(isCompanyManager || isCityManager || user?.role === 'companyadmin') && (
+              <DashboardCard 
+                  title="Company Personnel" 
+                  value={(stats.operators || 0).toString()} 
+                  trend="Active Crew & Staff" 
+                  trendType="up"
+                  icon={<Users size={18} />}
+              />
+            )}
           </div>
 
+          {/* Main Content Area */}
           {user?.role === "superadmin" ? (
             <div className={styles.superadminContent}>
               <section className={styles.tableSection}>
@@ -362,6 +560,24 @@ export default function Home() {
                 </div>
               </section>
             </div>
+          ) : isCompanyManager ? (
+            <div className={styles.operatorContent}>
+              <DataTable 
+                title="Company Schedules & Fleet Dispatches" 
+                columns={companyScheduleColumns} 
+                data={companySchedules} 
+                loading={loading}
+              />
+            </div>
+          ) : isCityManager ? (
+            <div className={styles.operatorContent}>
+              <DataTable 
+                title="Terminal Departure Schedules" 
+                columns={companyScheduleColumns} 
+                data={trips} 
+                loading={loading}
+              />
+            </div>
           ) : user?.role === 'operator' ? (
             <div className={styles.operatorContent}>
               <DataTable 
@@ -385,10 +601,11 @@ export default function Home() {
             </div>
           )}
 
+          {/* Passenger Manifest Modal */}
           <Modal 
             isOpen={isModalOpen} 
             onClose={() => setIsModalOpen(false)} 
-            title={`Passengers - ${selectedTrip?.bus?.busNumber} (${selectedTrip?.route?.fromCity} to ${selectedTrip?.route?.toCity})`}
+            title={`Passengers - ${selectedTrip?.bus?.busNumber || 'Bus'} (${selectedTrip?.route?.fromCity || ''} to ${selectedTrip?.route?.toCity || ''})`}
           >
             <div className={styles.passengerList}>
               {loadingPassengers ? (
@@ -429,3 +646,4 @@ export default function Home() {
     </main>
   );
 }
+

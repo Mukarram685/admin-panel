@@ -40,6 +40,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
     const [userRole, setUserRole] = useState<string>("superadmin");
+    const [userOperatorType, setUserOperatorType] = useState<string>("");
     const [userName, setUserName] = useState<string>("Admin");
 
     useEffect(() => {
@@ -48,6 +49,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             try {
                 const user = JSON.parse(userStr);
                 setUserRole(user.role || "superadmin");
+                setUserOperatorType(user.operatorType || "");
                 setUserName(user.name || "Admin");
             } catch (e) {
                 console.error("Failed to parse user from localStorage");
@@ -73,19 +75,19 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             label: "Operators", 
             path: "/operators", 
             icon: UserCog,
-            roles: ["superadmin", "companyadmin"]
+            roles: ["superadmin", "companyadmin", "operator"]
         },
         { 
             label: "Buses", 
             path: "/buses", 
             icon: BusFront,
-            roles: ["superadmin", "companyadmin"]
+            roles: ["superadmin", "companyadmin", "operator"]
         },
         { 
             label: "Routes", 
             path: "/routes", 
             icon: MapPin,
-            roles: ["superadmin", "companyadmin"]
+            roles: ["superadmin", "companyadmin", "operator"]
         },
         { 
             label: "Schedules", 
@@ -108,8 +110,21 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     ];
 
     const visibleNavItems = navItems.filter(item => {
-        if (!item.roles) return true;
-        return item.roles.includes(userRole);
+        if (userRole === "superadmin") return true;
+        if (userRole === "companyadmin") {
+            return item.path !== "/companies";
+        }
+        if (userRole === "operator") {
+            if (userOperatorType === "company_manager") {
+                return ["/", "/operators", "/buses", "/routes", "/schedules"].includes(item.path);
+            }
+            if (userOperatorType === "city_manager") {
+                return ["/", "/operators", "/schedules"].includes(item.path);
+            }
+            // trip_operator
+            return ["/", "/schedules"].includes(item.path);
+        }
+        return false;
     });
 
     // Contextual menu items based on current page with dedicated icons
@@ -213,7 +228,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                         <span className={styles.mobileUserName}>{userName}</span>
                         <span className={styles.mobileUserRole}>
                             <ShieldCheck size={11} />
-                            {userRole}
+                            {userRole === 'operator' && userOperatorType ? userOperatorType.replace('_', ' ') : userRole}
                         </span>
                     </div>
                 </div>

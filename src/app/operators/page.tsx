@@ -226,28 +226,33 @@ export default function OperatorsPage() {
         {
             key: "actions",
             header: "Actions",
-            render: (row: Operator) => (
-                <div style={{ display: 'flex', gap: '6px' }}>
-                    {row.status === "pending" && (
-                        <button 
-                            onClick={() => handleStatusUpdate(row._id, "approve")}
-                            className="btn-icon-success"
-                            title="Approve Staff"
-                        >
-                            <Check size={13} />
-                            <span>Approve</span>
-                        </button>
-                    )}
-                    <button 
-                        onClick={() => openScopeModal(row)}
-                        className="btn-icon-primary"
-                        title="Manage Scope"
-                    >
-                        <Sliders size={13} />
-                        <span>Scope</span>
-                    </button>
-                </div>
-            )
+            render: (row: Operator) => {
+                const canManageScope = user?.role === "superadmin" || user?.role === "companyadmin" || user?.operatorType === "company_manager";
+                return (
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        {canManageScope && row.status === "pending" && (
+                            <button 
+                                onClick={() => handleStatusUpdate(row._id, "approve")}
+                                className="btn-icon-success"
+                                title="Approve Staff"
+                            >
+                                <Check size={13} />
+                                <span>Approve</span>
+                            </button>
+                        )}
+                        {canManageScope && (
+                            <button 
+                                onClick={() => openScopeModal(row)}
+                                className="btn-icon-primary"
+                                title="Manage Scope"
+                            >
+                                <Sliders size={13} />
+                                <span>Scope</span>
+                            </button>
+                        )}
+                    </div>
+                );
+            }
         }
     ];
 
@@ -255,17 +260,23 @@ export default function OperatorsPage() {
         <main className="page-container">
             <header className="page-header">
                 <div>
-                    <h1 className="page-title">Operator Staff Directory</h1>
-                    <p className="page-subtitle">Manage driver assignments, city managers, and crew credentials.</p>
+                    <h1 className="page-title">
+                        {user?.operatorType === "city_manager" ? "Terminal Crew Directory" : "Operator Staff Directory"}
+                    </h1>
+                    <p className="page-subtitle">
+                        {user?.operatorType === "city_manager" 
+                            ? `Manage local drivers and conductors for ${user?.operatorScope?.cities?.join(", ") || "your terminal"}.`
+                            : "Manage driver assignments, city managers, and crew credentials."}
+                    </p>
                 </div>
                 <button onClick={openAddOperatorModal} className="btn-primary">
                     <UserPlus size={15} />
-                    <span>Register New Operator</span>
+                    <span>{user?.operatorType === "city_manager" ? "Register New Conductor/Driver" : "Register New Operator"}</span>
                 </button>
             </header>
 
             <DataTable
-                title="Active Personnel"
+                title={user?.operatorType === "city_manager" ? "Station Personnel" : "Active Personnel"}
                 columns={columns}
                 data={operators}
                 loading={loading}
@@ -275,7 +286,7 @@ export default function OperatorsPage() {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title="Register New Operator"
+                title={user?.operatorType === "city_manager" ? "Register Terminal Driver / Conductor" : "Register New Operator"}
             >
                 <form onSubmit={handleRegister}>
                     <div className="form-group">
@@ -323,16 +334,25 @@ export default function OperatorsPage() {
                         />
                     </div>
                     <div className="form-group">
-                        <label className="form-label">Operator Type</label>
-                        <select
-                            className="form-select"
-                            value={formData.operatorType}
-                            onChange={(e) => setFormData({ ...formData, operatorType: e.target.value })}
-                        >
-                            <option value="trip_operator">Trip Operator (Conductor/Driver)</option>
-                            <option value="city_manager">City Terminal Manager</option>
-                            <option value="company_manager">Company Dispatch Manager</option>
-                        </select>
+                        <label className="form-label">Operator Designation</label>
+                        {user?.operatorType === "city_manager" ? (
+                            <input 
+                                type="text" 
+                                readOnly 
+                                className="form-input" 
+                                value={`Trip Operator (Conductor/Driver) - ${user?.operatorScope?.cities?.join(", ") || "Assigned City"}`} 
+                            />
+                        ) : (
+                            <select
+                                className="form-select"
+                                value={formData.operatorType}
+                                onChange={(e) => setFormData({ ...formData, operatorType: e.target.value })}
+                            >
+                                <option value="trip_operator">Trip Operator (Conductor/Driver)</option>
+                                <option value="city_manager">City Terminal Manager</option>
+                                <option value="company_manager">Company Dispatch Manager</option>
+                            </select>
+                        )}
                     </div>
                     {user?.role === "superadmin" && (
                         <div className="form-group">
