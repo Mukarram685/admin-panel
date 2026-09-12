@@ -41,11 +41,11 @@ export default function Reports() {
         
         // Calculate stats
         const totalRev = bookingsList.reduce((acc: number, b: any) => {
-            if (b.bookingStatus === 'cancelled' || b.status === 'cancelled') return acc;
+            if (b.bookingStatus === 'cancelled' || b.bookingStatus === 'refunded' || b.status === 'cancelled') return acc;
             return acc + (b.totalAmount || 0) - (b.refundAmount || 0);
         }, 0);
 
-        const cancelledCount = bookingsList.filter((b: any) => b.bookingStatus === 'cancelled' || b.status === 'cancelled').length;
+        const cancelledCount = bookingsList.filter((b: any) => b.bookingStatus === 'cancelled' || b.bookingStatus === 'refunded' || b.status === 'cancelled').length;
 
         setStats({
           totalRevenue: totalRev,
