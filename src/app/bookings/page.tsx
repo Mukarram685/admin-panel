@@ -17,7 +17,7 @@ export default function BookingsPage() {
             const res = await fetchAPI("/bookings/company/all");
             const bookings = res.data || res.bookings || [];
             
-            const activeBookings = bookings.filter((b: any) => b.status !== 'cancelled' && b.bookingStatus !== 'cancelled');
+            const activeBookings = bookings.filter((b: any) => b.status !== 'cancelled' && b.bookingStatus !== 'cancelled' && b.bookingStatus !== 'refunded');
             const totalAmount = activeBookings.reduce((acc: number, b: any) => acc + (b.totalAmount || 0) - (b.refundAmount || 0), 0);
 
             setStats({
