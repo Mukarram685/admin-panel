@@ -90,7 +90,7 @@ export default function Home() {
           const companiesList = companiesRes.companies || [];
 
           const totalRev = bookingsList.reduce((acc: number, b: any) => {
-              if (b.bookingStatus === 'cancelled') return acc;
+              if (b.bookingStatus === 'cancelled' || b.bookingStatus === 'refunded' || b.status === 'cancelled') return acc;
               return acc + (b.totalAmount || 0) - (b.refundAmount || 0);
           }, 0);
 
@@ -114,12 +114,12 @@ export default function Home() {
           const routesList = routesRes.routes || [];
 
           const totalRev = bookingsList.reduce((acc: number, b: any) => {
-              if (b.bookingStatus === 'cancelled') return acc;
+              if (b.bookingStatus === 'cancelled' || b.bookingStatus === 'refunded' || b.status === 'cancelled') return acc;
               return acc + (b.totalAmount || 0) - (b.refundAmount || 0);
           }, 0);
 
           setStats({
-            bookings: bookingsList.filter((b: any) => b.bookingStatus !== 'cancelled').length,
+            bookings: bookingsList.filter((b: any) => b.bookingStatus !== 'cancelled' && b.bookingStatus !== 'refunded' && b.status !== 'cancelled').length,
             revenue: totalRev,
             buses: busesList.length,
             routes: routesList.length,
