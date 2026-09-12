@@ -11,11 +11,56 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 16px;
-    background: rgba(11, 15, 25, 0.88);
+    background: rgba(11, 15, 25, 0.9);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border-bottom: 1px solid var(--card-border);
     gap: 12px;
+}
+
+@media (max-width: 640px) {
+    .header {
+        padding: 0 12px;
+        gap: 8px;
+    }
+}
+
+.leftSection {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.hamburgerBtn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: var(--subtle-bg);
+    border: 1px solid var(--card-border);
+    color: var(--foreground);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.hamburgerBtn:hover {
+    background: var(--hover-bg);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: #a5b4fc;
+}
+
+.hamburgerBtn:active {
+    transform: scale(0.95);
+}
+
+@media (max-width: 1023px) {
+    .hamburgerBtn {
+        display: flex;
+    }
 }
 
 .logo {
@@ -42,6 +87,7 @@
     justify-content: center;
     color: #ffffff;
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    flex-shrink: 0;
 }
 
 .logoText {
@@ -66,6 +112,12 @@
 
 .nav::-webkit-scrollbar {
     display: none;
+}
+
+@media (max-width: 1023px) {
+    .nav {
+        display: none;
+    }
 }
 
 .navItem {
@@ -118,6 +170,12 @@
     flex-shrink: 0;
 }
 
+@media (max-width: 640px) {
+    .rightSection {
+        gap: 8px;
+    }
+}
+
 .searchContainer {
     position: relative;
     display: flex;
@@ -146,13 +204,19 @@
 .search:focus {
     border-color: var(--primary);
     background: rgba(15, 23, 42, 0.9);
-    width: 180px;
+    width: 175px;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .search::placeholder {
     color: var(--text-secondary);
     font-size: 11px;
+}
+
+@media (max-width: 820px) {
+    .searchContainer {
+        display: none;
+    }
 }
 
 .profile {
@@ -182,6 +246,12 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+}
+
+@media (max-width: 768px) {
+    .userInfo {
+        display: none;
+    }
 }
 
 .userName {
@@ -226,4 +296,10 @@
     background: var(--danger-light);
     color: #f87171;
     border-color: rgba(239, 68, 68, 0.35);
+}
+
+@media (max-width: 580px) {
+    .logoutBtn {
+        display: none;
+    }
 }

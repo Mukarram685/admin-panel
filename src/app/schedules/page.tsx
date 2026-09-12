@@ -623,22 +623,36 @@ export default function SchedulesPage() {
                     box-sizing: border-box;
                 }
                 .page-title {
-                    font-size: 26px;
+                    font-size: clamp(20px, 3.5vw, 26px);
                     font-weight: 800;
                     margin: 0;
                     color: var(--foreground);
                     letter-spacing: -0.025em;
+                    line-height: 1.2;
                 }
                 .page-subtitle {
                     color: var(--text-muted);
                     margin: 6px 0 0 0;
-                    font-size: 13px;
+                    font-size: clamp(12px, 2vw, 13px);
+                    line-height: 1.5;
                 }
 
                 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-                .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+                @media (max-width: 640px) {
+                    .form-grid { grid-template-columns: 1fr; gap: 12px; }
+                }
+
+                .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+                @media (max-width: 480px) {
+                    .modal-actions { flex-direction: column-reverse; width: 100%; }
+                    .modal-actions button { width: 100%; }
+                }
                 
                 .edit-info-banner { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 14px; background: rgba(255, 255, 255, 0.03); border-radius: var(--radius-md); margin-bottom: 16px; border: 1px solid var(--card-border); }
+                @media (max-width: 640px) {
+                    .edit-info-banner { grid-template-columns: 1fr; gap: 10px; }
+                }
+
                 .info-item { display: flex; flex-direction: column; gap: 4px; }
                 .info-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
                 .info-value { font-size: 13px; color: var(--foreground); font-weight: 600; }
@@ -646,15 +660,21 @@ export default function SchedulesPage() {
 
                 .error-text { background: var(--danger-light); color: var(--danger); padding: 10px 14px; border-radius: var(--radius-md); font-size: 13px; margin-bottom: 16px; border: 1px solid rgba(239, 68, 68, 0.25); }
                 
+                .manifest-container { width: 100%; max-width: 100%; overflow-x: hidden; }
                 .manifest-header { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 16px; background: var(--subtle-bg); border-radius: var(--radius-md); margin-bottom: 20px; border: 1px solid var(--card-border); }
+                @media (max-width: 640px) {
+                    .manifest-header { grid-template-columns: 1fr; gap: 10px; }
+                }
+
                 .m-info { display: flex; flex-direction: column; gap: 4px; }
                 .m-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
                 .m-value { font-size: 14px; color: var(--foreground); font-weight: 600; }
                 
                 .section-title { font-size: 13px; font-weight: 700; color: var(--foreground); margin-bottom: 14px; text-transform: uppercase; letter-spacing: 0.05em; border-left: 3px solid var(--primary); padding-left: 10px; }
                 
-                .p-table { width: 100%; border-collapse: collapse; }
-                .p-table th { text-align: left; padding: 10px 12px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--card-border); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+                .p-list { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+                .p-table { width: 100%; min-width: 520px; border-collapse: collapse; }
+                .p-table th { text-align: left; padding: 10px 12px; font-size: 11px; color: var(--text-secondary); border-bottom: 1px solid var(--card-border); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; white-space: nowrap; }
                 .p-table td { padding: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); font-size: 13px; color: var(--text-muted); }
                 
                 .seat-num { background: var(--primary-light); color: #a5b4fc; padding: 2px 8px; border-radius: var(--radius-sm); font-weight: 700; font-family: monospace; font-size: 12px; }
@@ -665,6 +685,20 @@ export default function SchedulesPage() {
                 .empty-text { color: var(--text-secondary); text-align: center; padding: 32px; }
                 
                 .w-full { width: 100%; }
+
+                @media (max-width: 640px) {
+                    .page-container {
+                        gap: 18px;
+                    }
+                    .page-header {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 14px;
+                    }
+                    .page-header button {
+                        width: 100%;
+                    }
+                }
             `}</style>
         </main>
     );

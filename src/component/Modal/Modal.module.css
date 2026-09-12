@@ -1,13 +1,15 @@
 .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
+    padding: 14px;
+    box-sizing: border-box;
     animation: fadeIn 0.2s ease-out;
 }
 
@@ -16,14 +18,23 @@
     border: 1px solid var(--card-border);
     backdrop-filter: blur(var(--glass-blur));
     -webkit-backdrop-filter: blur(var(--glass-blur));
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     width: 100%;
-    max-width: 500px;
+    max-width: 520px;
     max-height: 90vh;
     overflow-y: auto;
-    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6);
     padding: 24px;
-    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+    animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 640px) {
+    .modal {
+        max-height: 94vh;
+        padding: 18px 14px;
+        border-radius: var(--radius-md);
+    }
 }
 
 .header {
@@ -31,36 +42,43 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    padding-bottom: 16px;
+    padding-bottom: 14px;
     border-bottom: 1px solid var(--card-border);
+    gap: 12px;
 }
 
 .title {
-    font-size: 18px;
-    font-weight: 600;
+    font-size: clamp(15px, 2.5vw, 18px);
+    font-weight: 700;
     margin: 0;
     letter-spacing: -0.02em;
     color: var(--foreground);
+    line-height: 1.3;
 }
 
 .close {
-    background: transparent;
-    border: none;
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
+    background: var(--subtle-bg);
+    border: 1px solid var(--card-border);
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
     color: var(--text-muted);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
     transition: all 0.2s;
+    flex-shrink: 0;
 }
 
 .close:hover {
     background: var(--hover-bg);
     color: var(--foreground);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.close:active {
+    transform: scale(0.95);
 }
 
 .formGroup {
@@ -71,8 +89,8 @@
 }
 
 .label {
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 11px;
+    font-weight: 700;
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -82,12 +100,14 @@
 .select {
     background: var(--subtle-bg);
     border: 1px solid var(--card-border);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     padding: 10px 14px;
     color: var(--foreground);
     outline: none;
     font-size: 14px;
     transition: all 0.2s;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .select option {
@@ -98,7 +118,8 @@
 .input:focus,
 .select:focus {
     border-color: var(--primary);
-    background: var(--hover-bg);
+    background: rgba(15, 23, 42, 0.9);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .error {
@@ -107,7 +128,7 @@
     margin-bottom: 16px;
     padding: 10px 14px;
     background: rgba(239, 68, 68, 0.1);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     border: 1px solid rgba(239, 68, 68, 0.2);
 }
 

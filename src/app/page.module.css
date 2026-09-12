@@ -8,22 +8,30 @@
   box-sizing: border-box;
 }
 
+@media (max-width: 640px) {
+  .container {
+    gap: 18px;
+  }
+}
+
 .header {
   margin-bottom: 4px;
 }
 
 .title {
-  font-size: 26px;
+  font-size: clamp(20px, 3.5vw, 26px);
   font-weight: 800;
   margin: 0;
   color: var(--foreground);
   letter-spacing: -0.025em;
+  line-height: 1.2;
 }
 
 .subtitle {
   color: var(--text-muted);
   margin: 6px 0 0 0;
-  font-size: 13px;
+  font-size: clamp(12px, 2vw, 13px);
+  line-height: 1.5;
 }
 
 .error {
@@ -44,6 +52,12 @@
   min-width: 0;
 }
 
+@media (max-width: 640px) {
+  .content {
+    gap: 18px;
+  }
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -61,6 +75,7 @@
 @media (max-width: 640px) {
   .grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 
@@ -69,6 +84,13 @@
   border-radius: var(--radius-lg);
   background: var(--subtle-bg);
   border: 1px solid var(--card-border);
+}
+
+@media (max-width: 640px) {
+  .summaryBox {
+    padding: 16px 14px;
+    border-radius: var(--radius-md);
+  }
 }
 
 .summaryHeader {
@@ -80,6 +102,7 @@
 
 .summaryIcon {
   color: var(--primary);
+  flex-shrink: 0;
 }
 
 .summaryContent h3 {
@@ -121,12 +144,31 @@
   border-radius: var(--radius-lg);
   padding: 16px 20px;
   backdrop-filter: blur(10px);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .operatorHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px;
+    gap: 12px;
+    border-radius: var(--radius-md);
+  }
 }
 
 .operatorInfo {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .operatorInfo {
+    gap: 12px;
+    width: 100%;
+  }
 }
 
 .infoItem {
@@ -164,12 +206,14 @@
   align-items: center;
   gap: 6px;
   letter-spacing: 0.03em;
+  flex-shrink: 0;
 }
 
 .actions {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .superadminContent {
@@ -185,6 +229,13 @@
   padding: 20px;
 }
 
+@media (max-width: 640px) {
+  .tableSection {
+    padding: 14px 12px;
+    border-radius: var(--radius-md);
+  }
+}
+
 .sectionHeader {
   display: flex;
   align-items: center;
@@ -194,6 +245,7 @@
 
 .sectionIcon {
   color: var(--primary);
+  flex-shrink: 0;
 }
 
 .tableSection h2 {
@@ -213,6 +265,7 @@
 
 .customTable {
   width: 100%;
+  min-width: 600px;
   border-collapse: collapse;
 }
 
@@ -226,6 +279,7 @@
   letter-spacing: 0.05em;
   border-bottom: 1px solid var(--card-border);
   background: rgba(255, 255, 255, 0.02);
+  white-space: nowrap;
 }
 
 .customTable td {
@@ -239,8 +293,15 @@
   border-bottom: none;
 }
 
+.passengerList {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .pTable {
   width: 100%;
+  min-width: 480px;
   border-collapse: collapse;
   margin-top: 12px;
 }
@@ -254,6 +315,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .pTable td {

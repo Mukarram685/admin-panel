@@ -4,8 +4,11 @@ import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/component/Sidebar/Sidebar";
 import Header from "@/component/Header/Header";
 
+import styles from "./AuthWrapper.module.css";
+
 export default function AuthWrapper({ children }: { children: React.ReactNode }) {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+    const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -21,6 +24,9 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     };
 
     useEffect(() => {
+        // Auto-close mobile drawer on route navigation
+        setSidebarOpen(false);
+
         const token = localStorage.getItem("accessToken");
         const userStr = localStorage.getItem("user");
         
@@ -56,9 +62,9 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
     if (isAuthenticated === null && pathname !== "/login") {
         // Prevents UI flicker while checking authentication state
         return (
-            <div style={{ height: "100vh", width: "100%", display: "flex", flexDirection: "column", gap: "16px", alignItems: "center", justifyContent: "center", background: "var(--background)", color: "var(--text-muted)" }}>
-                <div style={{ width: "36px", height: "36px", border: "3px solid rgba(255, 255, 255, 0.1)", borderTopColor: "var(--primary)", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                <span style={{ fontSize: "13px", fontWeight: 500, letterSpacing: "0.02em" }}>Verifying session...</span>
+            <div className={styles.loadingContainer}>
+                <div className={styles.loadingSpinner} />
+                <span className={styles.loadingText}>Verifying session...</span>
             </div>
         );
     }
@@ -68,13 +74,19 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
         return <>{children}</>;
     }
 
-    // Render full dashboard layout
+    // Render full responsive dashboard layout
     return (
-        <div style={{ display: "flex", flexDirection: "column", width: "100%", minHeight: "100vh", overflowX: "hidden", position: "relative" }}>
-            <Header />
-            <div style={{ display: "flex", marginTop: "var(--header-height)", flex: 1, width: "100%", minWidth: 0, minHeight: "calc(100vh - var(--header-height))" }}>
-                <Sidebar />
-                <main style={{ flex: 1, minWidth: 0, width: "calc(100% - var(--sidebar-width))", maxWidth: "calc(100% - var(--sidebar-width))", padding: "24px 28px", boxSizing: "border-box", overflowY: "auto", overflowX: "hidden" }}>
+        <div className={styles.container}>
+            <Header 
+                isSidebarOpen={sidebarOpen} 
+                onToggleSidebar={() => setSidebarOpen(prev => !prev)} 
+            />
+            <div className={styles.layoutBody}>
+                <Sidebar 
+                    isOpen={sidebarOpen} 
+                    onClose={() => setSidebarOpen(false)} 
+                />
+                <main className={styles.main}>
                     {children}
                 </main>
             </div>

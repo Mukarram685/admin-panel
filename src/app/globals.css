@@ -402,19 +402,22 @@ a {
 }
 
 .page-title {
-  font-size: 26px;
+  font-size: clamp(20px, 3.5vw, 26px);
   font-weight: 800;
   margin: 0;
   color: var(--foreground);
   letter-spacing: -0.025em;
+  line-height: 1.2;
 }
 
 .page-subtitle {
   color: var(--text-muted);
   margin: 6px 0 0 0;
-  font-size: 13px;
+  font-size: clamp(12px, 2vw, 13px);
+  line-height: 1.5;
 }
 
+/* Responsive Grids */
 .stat-grid-4 {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -432,10 +435,11 @@ a {
 @media (max-width: 640px) {
   .stat-grid-4 {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 
-.stat-grid-2 {
+.stat-grid-2, .summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
@@ -443,8 +447,74 @@ a {
   box-sizing: border-box;
 }
 
-@media (max-width: 768px) {
-  .stat-grid-2 {
+@media (max-width: 640px) {
+  .stat-grid-2, .summary-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Responsive Form Grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* Responsive Modal Actions */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .modal-actions {
+    flex-direction: column-reverse;
+    width: 100%;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+}
+
+/* Table Responsive Container */
+.table-responsive {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+/* Media Query Refinements for Small Mobile */
+@media (max-width: 640px) {
+  .page-container {
+    gap: 18px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .page-header > button,
+  .page-header > .btn-primary {
+    width: 100%;
   }
 }

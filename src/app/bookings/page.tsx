@@ -100,16 +100,18 @@ export default function BookingsPage() {
                     width: 100%;
                 }
                 .page-title { 
-                    font-size: 26px; 
+                    font-size: clamp(20px, 3.5vw, 26px); 
                     font-weight: 800; 
                     margin: 0; 
                     color: var(--foreground); 
                     letter-spacing: -0.025em; 
+                    line-height: 1.2;
                 }
                 .page-subtitle { 
                     color: var(--text-muted); 
                     margin: 6px 0 0 0; 
-                    font-size: 13px; 
+                    font-size: clamp(12px, 2vw, 13px); 
+                    line-height: 1.5;
                 }
                 
                 .summary-grid { 
@@ -123,6 +125,7 @@ export default function BookingsPage() {
                 @media (max-width: 640px) {
                     .summary-grid {
                         grid-template-columns: 1fr;
+                        gap: 12px;
                     }
                 }
                 
@@ -157,6 +160,16 @@ export default function BookingsPage() {
                     background: linear-gradient(135deg, rgba(17, 24, 39, 0.8), rgba(30, 27, 75, 0.25));
                     width: 100%;
                     box-sizing: border-box;
+                    border-radius: var(--radius-lg);
+                }
+
+                @media (max-width: 640px) {
+                    .privacy-notice {
+                        flex-direction: column;
+                        gap: 14px;
+                        padding: 16px 14px;
+                        border-radius: var(--radius-md);
+                    }
                 }
 
                 .privacy-icon-box {
@@ -170,6 +183,13 @@ export default function BookingsPage() {
                     justify-content: center;
                     flex-shrink: 0;
                     border: 1px solid rgba(99, 102, 241, 0.3);
+                }
+
+                @media (max-width: 640px) {
+                    .privacy-icon-box {
+                        width: 40px;
+                        height: 40px;
+                    }
                 }
 
                 .privacy-heading {
@@ -191,6 +211,12 @@ export default function BookingsPage() {
                     color: var(--text-muted); 
                     line-height: 1.6; 
                     font-size: 13px; 
+                }
+
+                @media (max-width: 640px) {
+                    .page-container {
+                        gap: 18px;
+                    }
                 }
             `}</style>
         </main>

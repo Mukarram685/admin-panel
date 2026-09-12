@@ -7,29 +7,47 @@
     border-radius: var(--radius-lg);
 }
 
+@media (max-width: 640px) {
+    .container {
+        padding: 16px 12px;
+        border-radius: var(--radius-md);
+    }
+}
+
 .headerRow {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     padding: 0 2px;
     width: 100%;
     gap: 12px;
     flex-wrap: wrap;
+    box-sizing: border-box;
+}
+
+@media (max-width: 520px) {
+    .headerRow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
 }
 
 .titleGroup {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .title {
-    font-size: 16px;
+    font-size: clamp(14px, 2.5vw, 16px);
     font-weight: 700;
     margin: 0;
     letter-spacing: -0.02em;
     color: var(--foreground);
+    line-height: 1.2;
 }
 
 .countBadge {
@@ -48,6 +66,7 @@
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+    flex-wrap: wrap;
 }
 
 .tableContainer {
@@ -81,6 +100,13 @@
     white-space: nowrap;
 }
 
+@media (max-width: 640px) {
+    .th {
+        padding: 9px 10px;
+        font-size: 10.5px;
+    }
+}
+
 .tr {
     transition: background 0.15s ease;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
@@ -99,6 +125,13 @@
     color: var(--text-muted);
     font-size: 13px;
     vertical-align: middle;
+}
+
+@media (max-width: 640px) {
+    .td {
+        padding: 10px;
+        font-size: 12.5px;
+    }
 }
 
 .empty {

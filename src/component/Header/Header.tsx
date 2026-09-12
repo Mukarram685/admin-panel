@@ -12,11 +12,18 @@ import {
     BarChart3,
     Search,
     LogOut,
-    ShieldCheck
+    ShieldCheck,
+    Menu,
+    X
 } from "lucide-react";
 import styles from "./Header.module.css";
 
-export default function Header() {
+interface HeaderProps {
+    isSidebarOpen?: boolean;
+    onToggleSidebar?: () => void;
+}
+
+export default function Header({ isSidebarOpen = false, onToggleSidebar }: HeaderProps) {
     const pathname = usePathname();
     const router = useRouter();
     const [userRole, setUserRole] = useState<string>("superadmin");
@@ -101,11 +108,22 @@ export default function Header() {
 
     return (
         <header className={styles.header}>
-            <div className={styles.logo} onClick={() => router.push("/")} role="button" tabIndex={0}>
-                <div className={styles.logoIconBox}>
-                    <BusFront size={18} />
+            <div className={styles.leftSection}>
+                <button
+                    className={styles.hamburgerBtn}
+                    onClick={onToggleSidebar}
+                    aria-label={isSidebarOpen ? "Close navigation menu" : "Open navigation menu"}
+                    title={isSidebarOpen ? "Close menu" : "Open menu"}
+                >
+                    {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
+                </button>
+
+                <div className={styles.logo} onClick={() => router.push("/")} role="button" tabIndex={0}>
+                    <div className={styles.logoIconBox}>
+                        <BusFront size={18} />
+                    </div>
+                    <span className={styles.logoText}>BookNGo</span>
                 </div>
-                <span className={styles.logoText}>BookNGo</span>
             </div>
             
             <nav className={styles.nav}>

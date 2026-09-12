@@ -434,27 +434,40 @@ export default function BusesPage() {
                     box-sizing: border-box;
                 }
                 .page-title {
-                    font-size: 26px;
+                    font-size: clamp(20px, 3.5vw, 26px);
                     font-weight: 800;
                     margin: 0;
                     color: var(--foreground);
                     letter-spacing: -0.025em;
+                    line-height: 1.2;
                 }
                 .page-subtitle {
                     color: var(--text-muted);
                     margin: 6px 0 0 0;
-                    font-size: 13px;
+                    font-size: clamp(12px, 2vw, 13px);
+                    line-height: 1.5;
                 }
                 .form-grid {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
                     gap: 16px;
                 }
+                @media (max-width: 640px) {
+                    .form-grid {
+                        grid-template-columns: 1fr;
+                        gap: 12px;
+                    }
+                }
                 .amenities-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+                    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
                     gap: 8px;
                     margin-top: 4px;
+                }
+                @media (max-width: 480px) {
+                    .amenities-grid {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
                 }
                 .amenity-chip {
                     display: flex;
@@ -505,6 +518,16 @@ export default function BusesPage() {
                     justify-content: flex-end;
                     gap: 10px;
                     margin-top: 24px;
+                    flex-wrap: wrap;
+                }
+                @media (max-width: 480px) {
+                    .modal-actions {
+                        flex-direction: column-reverse;
+                        width: 100%;
+                    }
+                    .modal-actions button {
+                        width: 100%;
+                    }
                 }
                 .error-text {
                     background: var(--danger-light);
@@ -520,6 +543,19 @@ export default function BusesPage() {
                 }
                 @keyframes spin {
                     to { transform: rotate(360deg); }
+                }
+                @media (max-width: 640px) {
+                    .page-container {
+                        gap: 18px;
+                    }
+                    .page-header {
+                        flex-direction: column;
+                        align-items: stretch;
+                        gap: 14px;
+                    }
+                    .page-header button {
+                        width: 100%;
+                    }
                 }
             `}</style>
         </main>
