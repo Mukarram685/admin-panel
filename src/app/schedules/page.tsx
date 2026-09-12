@@ -167,7 +167,10 @@ export default function SchedulesPage() {
         setLoadingPassengers(true);
         try {
             const res = await fetchAPI(`/bookings/schedule/${schedule._id}`);
-            const processedList = (res.bookings || []).flatMap((b: any) => {
+            const activeBookings = (res.bookings || []).filter(
+                (b: any) => b.bookingStatus !== 'cancelled' && b.bookingStatus !== 'refunded' && b.status !== 'cancelled'
+            );
+            const processedList = activeBookings.flatMap((b: any) => {
                 const groups: Record<string, any> = {};
                 (b.seats || []).forEach((s: any) => {
                     const key = `${s.passengerName}-${s.passengerCNIC}`;
