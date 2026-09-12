@@ -15,16 +15,19 @@ import {
     Info,
     Tag,
     Phone,
-    ArrowRight
+    ArrowRight,
+    Building2
 } from "lucide-react";
 import { fetchAPI } from "@/utils/api";
 import DataTable from "@/component/DataTable/DataTable";
 import Modal from "@/component/Modal/Modal";
+import { useCompanyFilter } from "@/context/CompanyFilterContext";
 
 export default function SchedulesPage() {
     const [schedules, setSchedules] = useState([]);
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<any>(null);
+    const { selectedCompanyId: globalCompanyId, selectedCompany } = useCompanyFilter();
     const [availableRoutes, setAvailableRoutes] = useState<any[]>([]);
     const [availableBuses, setAvailableBuses] = useState<any[]>([]);
     const [availableOperators, setAvailableOperators] = useState<any[]>([]);
@@ -217,6 +220,15 @@ export default function SchedulesPage() {
         }
     };
 
+    const displayedSchedules = (user?.role === "superadmin" && globalCompanyId)
+        ? schedules.filter((s: any) => {
+            const compId = typeof s.company === "object" && s.company !== null
+                ? (s.company._id || s.company.id)
+                : s.company;
+            return compId === globalCompanyId;
+        })
+        : schedules;
+
     const columns = [
         {
             key: "route", header: "Route", render: (r: any) => (
@@ -230,6 +242,18 @@ export default function SchedulesPage() {
                 </div>
             )
         },
+        ...(user?.role === "superadmin" && !globalCompanyId ? [{
+            key: "company",
+            header: "Company",
+            render: (r: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Building2 size={13} color="var(--primary)" />
+                    <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>
+                        {typeof r.company === 'object' ? r.company?.name : "N/A"}
+                    </span>
+                </div>
+            )
+        }] : []),
         { 
             key: "bus", 
             header: "Assigned Bus", 
@@ -339,12 +363,14 @@ export default function SchedulesPage() {
                     <h1 className="page-title">
                         {user?.operatorType === 'city_manager' ? "Terminal Departures & Dispatch" :
                          user?.operatorType === 'company_manager' ? "Fleet Schedules & Network Dispatch" :
-                         user?.role === 'operator' ? "Assigned Duty Departures" : "Schedules & Dispatching"}
+                         (user?.role === 'superadmin' && selectedCompany ? `${selectedCompany.name} - Scheduled Departures` :
+                         user?.role === 'operator' ? "Assigned Duty Departures" : "Schedules & Dispatching")}
                     </h1>
                     <p className="page-subtitle">
                         {user?.operatorType === 'city_manager' ? `Coordinate vehicle departures and swap conductors/buses for ${user?.operatorScope?.cities?.join(", ") || "your terminal"}.` :
+                         (user?.role === 'superadmin' && selectedCompany ? `Managing active departure schedules for ${selectedCompany.name}.` :
                          user?.role === 'operator' ? "View passenger manifests, departure schedules, and update trip milestones." :
-                         "Coordinate vehicle departures, assign drivers, and manage route timings."}
+                         "Coordinate vehicle departures, assign drivers, and manage route timings.")}
                     </p>
                 </div>
                 {canDispatchSchedule && (
@@ -357,10 +383,11 @@ export default function SchedulesPage() {
 
             <DataTable 
                 title={user?.operatorType === 'city_manager' ? "Terminal Shifts" :
-                       user?.role === 'operator' ? "Assigned Shifts" : "Upcoming Departures"} 
+                       (user?.role === 'superadmin' && selectedCompany ? `${selectedCompany.name} Departures` :
+                       user?.role === 'operator' ? "Assigned Shifts" : "Upcoming Departures")} 
                 columns={columns} 
-                data={schedules} 
-                loading={loading} 
+                data={displayedSchedules} 
+                loading={loading}
             />
 
             {/* Create Modal */}

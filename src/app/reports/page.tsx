@@ -17,6 +17,7 @@ import {
 import DashboardCard from "@/component/DashboardCard/DashboardCard";
 import DataTable from "@/component/DataTable/DataTable";
 import { fetchAPI } from "@/utils/api";
+import { useCompanyFilter } from "@/context/CompanyFilterContext";
 import styles from "./page.module.css";
 
 export default function Reports() {
@@ -27,47 +28,23 @@ export default function Reports() {
     cancelledTrips: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const [rawBookings, setRawBookings] = useState<any[]>([]);
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [bookingData, setBookingData] = useState<any[]>([]);
+  const { selectedCompanyId: globalCompanyId, selectedCompany } = useCompanyFilter();
 
   useEffect(() => {
     async function loadReportData() {
       try {
         setLoading(true);
+        const userStr = localStorage.getItem("user");
+        if (userStr) setUser(JSON.parse(userStr));
         
         // Fetch booking data for reports
         const bookingsRes = await fetchAPI("/bookings/company/all").catch(() => ({ bookings: [] }));
         const bookingsList = bookingsRes.bookings || bookingsRes.data || [];
-        
-        // Calculate stats
-        const totalRev = bookingsList.reduce((acc: number, b: any) => {
-            if (b.bookingStatus === 'cancelled' || b.bookingStatus === 'refunded' || b.status === 'cancelled') return acc;
-            return acc + (b.totalAmount || 0) - (b.refundAmount || 0);
-        }, 0);
-
-        const cancelledCount = bookingsList.filter((b: any) => b.bookingStatus === 'cancelled' || b.bookingStatus === 'refunded' || b.status === 'cancelled').length;
-
-        setStats({
-          totalRevenue: totalRev,
-          totalBookings: bookingsList.length,
-          activeBuses: 0,
-          cancelledTrips: cancelledCount,
-        });
-
-        // Set data for tables
-        setRevenueData(bookingsList.slice(0, 5).map((b: any) => ({
-          pnr: b.pnr || b.bookingReference || "N/A",
-          amount: b.totalAmount || 0,
-          status: b.bookingStatus || b.status || "confirmed",
-          date: b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "Recent",
-        })));
-
-        setBookingData(bookingsList.slice(0, 10).map((b: any) => ({
-          pnr: b.pnr || b.bookingReference || "N/A",
-          totalAmount: b.totalAmount || 0,
-          bookingStatus: b.bookingStatus || b.status || "confirmed",
-          createdAt: b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "Recent",
-        })));
+        setRawBookings(bookingsList);
       } catch (err: any) {
         console.error("Failed to load report data:", err);
       } finally {
@@ -77,6 +54,47 @@ export default function Reports() {
 
     loadReportData();
   }, []);
+
+  useEffect(() => {
+    const bookingsList = (user?.role === "superadmin" && globalCompanyId)
+      ? rawBookings.filter((b: any) => {
+          const compId = typeof b.company === "object" && b.company !== null
+            ? (b.company._id || b.company.id)
+            : b.company;
+          return compId === globalCompanyId;
+        })
+      : rawBookings;
+
+    // Calculate stats
+    const totalRev = bookingsList.reduce((acc: number, b: any) => {
+        if (b.bookingStatus === 'cancelled' || b.bookingStatus === 'refunded' || b.status === 'cancelled') return acc;
+        return acc + (b.totalAmount || 0) - (b.refundAmount || 0);
+    }, 0);
+
+    const cancelledCount = bookingsList.filter((b: any) => b.bookingStatus === 'cancelled' || b.bookingStatus === 'refunded' || b.status === 'cancelled').length;
+
+    setStats({
+      totalRevenue: totalRev,
+      totalBookings: bookingsList.length,
+      activeBuses: 0,
+      cancelledTrips: cancelledCount,
+    });
+
+    // Set data for tables
+    setRevenueData(bookingsList.slice(0, 5).map((b: any) => ({
+      pnr: b.pnr || b.bookingReference || "N/A",
+      amount: b.totalAmount || 0,
+      status: b.bookingStatus || b.status || "confirmed",
+      date: b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "Recent",
+    })));
+
+    setBookingData(bookingsList.slice(0, 10).map((b: any) => ({
+      pnr: b.pnr || b.bookingReference || "N/A",
+      totalAmount: b.totalAmount || 0,
+      bookingStatus: b.bookingStatus || b.status || "confirmed",
+      createdAt: b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "Recent",
+    })));
+  }, [rawBookings, globalCompanyId, user]);
 
   const renderStatusBadge = (status: string) => {
     const s = (status || "").toLowerCase();
@@ -196,8 +214,16 @@ export default function Reports() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>Reports & Analytics</h1>
-        <p className={styles.subtitle}>Comprehensive financial telemetry and operational performance metrics</p>
+        <h1 className={styles.title}>
+          {user?.role === "superadmin" && selectedCompany 
+            ? `${selectedCompany.name} - Reports & Analytics` 
+            : "Reports & Analytics"}
+        </h1>
+        <p className={styles.subtitle}>
+          {user?.role === "superadmin" && selectedCompany 
+            ? `Comprehensive financial telemetry and performance metrics for ${selectedCompany.name}.` 
+            : "Comprehensive financial telemetry and operational performance metrics"}
+        </p>
       </div>
 
       <div className={styles.grid}>

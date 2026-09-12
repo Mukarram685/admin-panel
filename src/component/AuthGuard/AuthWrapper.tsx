@@ -4,6 +4,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/component/Sidebar/Sidebar";
 import Header from "@/component/Header/Header";
 
+import { CompanyFilterProvider } from "@/context/CompanyFilterContext";
 import styles from "./AuthWrapper.module.css";
 
 export default function AuthWrapper({ children }: { children: React.ReactNode }) {
@@ -87,20 +88,22 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
 
     // Render full responsive dashboard layout
     return (
-        <div className={styles.container}>
-            <Header 
-                isSidebarOpen={sidebarOpen} 
-                onToggleSidebar={() => setSidebarOpen(prev => !prev)} 
-            />
-            <div className={styles.layoutBody}>
-                <Sidebar 
-                    isOpen={sidebarOpen} 
-                    onClose={() => setSidebarOpen(false)} 
+        <CompanyFilterProvider>
+            <div className={styles.container}>
+                <Header 
+                    isSidebarOpen={sidebarOpen} 
+                    onToggleSidebar={() => setSidebarOpen(prev => !prev)} 
                 />
-                <main className={styles.main}>
-                    {children}
-                </main>
+                <div className={styles.layoutBody}>
+                    <Sidebar 
+                        isOpen={sidebarOpen} 
+                        onClose={() => setSidebarOpen(false)} 
+                    />
+                    <main className={styles.main}>
+                        {children}
+                    </main>
+                </div>
             </div>
-        </div>
+        </CompanyFilterProvider>
     );
 }

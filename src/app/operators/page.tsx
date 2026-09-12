@@ -17,6 +17,7 @@ import {
 import DataTable from "@/component/DataTable/DataTable";
 import Modal from "@/component/Modal/Modal";
 import { fetchAPI } from "@/utils/api";
+import { useCompanyFilter } from "@/context/CompanyFilterContext";
 
 interface Operator {
     _id: string;
@@ -25,6 +26,7 @@ interface Operator {
     role: string;
     status: string;
     operatorType: string;
+    company?: any;
     operatorScope: {
         cities: string[];
         buses: string[];
@@ -42,6 +44,7 @@ export default function OperatorsPage() {
     const [user, setUser] = useState<any>(null);
     const [companies, setCompanies] = useState<any[]>([]);
     const [selectedCompanyId, setSelectedCompanyId] = useState("");
+    const { selectedCompanyId: globalCompanyId, selectedCompany } = useCompanyFilter();
 
     // Form states
     const [formData, setFormData] = useState({
@@ -83,6 +86,9 @@ export default function OperatorsPage() {
 
     const openAddOperatorModal = () => {
         setError("");
+        if (user?.role === "superadmin" && globalCompanyId) {
+            setSelectedCompanyId(globalCompanyId);
+        }
         setIsModalOpen(true);
     };
 
@@ -140,7 +146,7 @@ export default function OperatorsPage() {
             });
             setIsModalOpen(false);
             setFormData({ name: "", email: "", password: "", phoneNumber: "", operatorType: "trip_operator" });
-            if (userData.role === "superadmin") setSelectedCompanyId("");
+            if (userData.role === "superadmin") setSelectedCompanyId(globalCompanyId || "");
             fetchOperators();
         } catch (err: any) {
             setError(err.message || "Failed to register operator");
@@ -188,6 +194,15 @@ export default function OperatorsPage() {
         setIsScopeModalOpen(true);
     };
 
+    const displayedOperators = (user?.role === "superadmin" && globalCompanyId)
+        ? operators.filter((op: any) => {
+            const compId = typeof op.company === "object" && op.company !== null
+                ? (op.company._id || op.company.id)
+                : op.company;
+            return compId === globalCompanyId;
+        })
+        : operators;
+
     const columns = [
         { 
             key: "name", 
@@ -201,6 +216,18 @@ export default function OperatorsPage() {
                 </div>
             )
         },
+        ...(user?.role === "superadmin" && !globalCompanyId ? [{
+            key: "company",
+            header: "Company",
+            render: (row: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Building2 size={13} color="var(--primary)" />
+                    <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>
+                        {typeof row.company === 'object' ? row.company?.name : "N/A"}
+                    </span>
+                </div>
+            )
+        }] : []),
         { key: "email", header: "Email" },
         { 
             key: "operatorType", 
@@ -261,12 +288,13 @@ export default function OperatorsPage() {
             <header className="page-header">
                 <div>
                     <h1 className="page-title">
-                        {user?.operatorType === "city_manager" ? "Terminal Crew Directory" : "Operator Staff Directory"}
+                        {user?.operatorType === "city_manager" ? "Terminal Crew Directory" : 
+                         (user?.role === "superadmin" && selectedCompany ? `${selectedCompany.name} - Operators Directory` : "Operator Staff Directory")}
                     </h1>
                     <p className="page-subtitle">
                         {user?.operatorType === "city_manager" 
                             ? `Manage local drivers and conductors for ${user?.operatorScope?.cities?.join(", ") || "your terminal"}.`
-                            : "Manage driver assignments, city managers, and crew credentials."}
+                            : (user?.role === "superadmin" && selectedCompany ? `Supervising active personnel and crew for ${selectedCompany.name}.` : "Manage driver assignments, city managers, and crew credentials.")}
                     </p>
                 </div>
                 <button onClick={openAddOperatorModal} className="btn-primary">
@@ -276,9 +304,9 @@ export default function OperatorsPage() {
             </header>
 
             <DataTable
-                title={user?.operatorType === "city_manager" ? "Station Personnel" : "Active Personnel"}
+                title={user?.operatorType === "city_manager" ? "Station Personnel" : (user?.role === "superadmin" && selectedCompany ? `${selectedCompany.name} Personnel` : "Active Personnel")}
                 columns={columns}
-                data={operators}
+                data={displayedOperators}
                 loading={loading}
             />
 

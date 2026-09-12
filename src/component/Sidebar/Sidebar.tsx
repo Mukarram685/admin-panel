@@ -29,6 +29,7 @@ import {
     X,
     ShieldCheck
 } from "lucide-react";
+import { useCompanyFilter } from "@/context/CompanyFilterContext";
 import styles from "./Sidebar.module.css";
 
 interface SidebarProps {
@@ -42,6 +43,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const [userRole, setUserRole] = useState<string>("superadmin");
     const [userOperatorType, setUserOperatorType] = useState<string>("");
     const [userName, setUserName] = useState<string>("Admin");
+    const { selectedCompanyId, setSelectedCompanyId, companies } = useCompanyFilter();
 
     useEffect(() => {
         const userStr = localStorage.getItem("user");
@@ -254,32 +256,84 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                     })}
                 </div>
 
-                {/* Contextual Quick Actions */}
-                <div className={styles.header}>
-                    <div className={styles.headerIcon}>
-                        <Sliders size={13} />
-                    </div>
-                    <h3 className={styles.title}>Quick Actions</h3>
-                </div>
-                
-                <nav className={styles.nav}>
-                    {contextualItems.map((item, index) => {
-                        const Icon = item.icon;
-                        return (
+                {/* Superadmin Company Selector or Regular Quick Actions */}
+                {userRole === "superadmin" ? (
+                    <>
+                        <div className={styles.header}>
+                            <div className={styles.headerIcon}>
+                                <Building2 size={13} />
+                            </div>
+                            <h3 className={styles.title}>Partner Companies</h3>
+                        </div>
+                        
+                        <div className={styles.companyListContainer}>
                             <button
-                                key={index}
-                                onClick={item.action}
-                                className={styles.navItem}
-                                title={item.label}
+                                onClick={() => {
+                                    setSelectedCompanyId("");
+                                    onClose?.();
+                                }}
+                                className={`${styles.navItem} ${selectedCompanyId === "" ? styles.activeNavItem : ''}`}
+                                title="View All Companies"
                             >
                                 <span className={styles.iconContainer}>
-                                    <Icon size={14} />
+                                    <Building2 size={14} />
                                 </span>
-                                <span className={styles.itemLabel}>{item.label}</span>
+                                <span className={styles.itemLabel}>All Companies</span>
+                                <span className={styles.countBadge}>{companies.length}</span>
                             </button>
-                        );
-                    })}
-                </nav>
+
+                            {companies.map((company) => {
+                                const isSelected = selectedCompanyId === company._id;
+                                return (
+                                    <button
+                                        key={company._id}
+                                        onClick={() => {
+                                            setSelectedCompanyId(company._id);
+                                            onClose?.();
+                                        }}
+                                        className={`${styles.navItem} ${isSelected ? styles.activeNavItem : ''}`}
+                                        title={company.name}
+                                    >
+                                        <span className={styles.iconContainer}>
+                                            <span className={styles.companyInitial}>
+                                                {company.name ? company.name.charAt(0).toUpperCase() : "C"}
+                                            </span>
+                                        </span>
+                                        <span className={styles.itemLabel}>{company.name}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className={styles.header}>
+                            <div className={styles.headerIcon}>
+                                <Sliders size={13} />
+                            </div>
+                            <h3 className={styles.title}>Quick Actions</h3>
+                        </div>
+                        
+                        <nav className={styles.nav}>
+                            {contextualItems.map((item, index) => {
+                                const Icon = item.icon;
+                                return (
+                                    <button
+                                        key={index}
+                                        onClick={item.action}
+                                        className={styles.navItem}
+                                        title={item.label}
+                                    >
+                                        <span className={styles.iconContainer}>
+                                            <Icon size={14} />
+                                        </span>
+                                        <span className={styles.itemLabel}>{item.label}</span>
+                                    </button>
+                                );
+                            })}
+                        </nav>
+                    </>
+                )}
 
                 <div className={styles.footer}>
                     <div className={styles.statusIndicator}>

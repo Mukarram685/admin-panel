@@ -26,10 +26,12 @@ import DashboardCard from "@/component/DashboardCard/DashboardCard";
 import DataTable from "@/component/DataTable/DataTable";
 import Modal from "@/component/Modal/Modal";
 import { fetchAPI } from "@/utils/api";
+import { useCompanyFilter } from "@/context/CompanyFilterContext";
 import styles from "./page.module.css";
 
 export default function Home() {
   const router = useRouter();
+  const { selectedCompanyId: globalCompanyId, selectedCompany } = useCompanyFilter();
   const [stats, setStats] = useState({
     bookings: 0,
     revenue: 0,
@@ -47,6 +49,21 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loadingPassengers, setLoadingPassengers] = useState(false);
   const [companies, setCompanies] = useState<any[]>([]);
+
+  // Superadmin raw datasets for reactive filtering
+  const [rawSuperadminData, setRawSuperadminData] = useState<{
+    bookings: any[];
+    buses: any[];
+    routes: any[];
+    companies: any[];
+    operators: any[];
+  }>({
+    bookings: [],
+    buses: [],
+    routes: [],
+    companies: [],
+    operators: [],
+  });
 
   const handleApproveCompany = async (id: string, action: "approve" | "reject") => {
     if (!confirm(`Are you sure you want to ${action} this company?`)) return;
@@ -132,29 +149,26 @@ export default function Home() {
             });
           }
         } else if (userData.role === "superadmin") {
-          const [bookingsRes, busesRes, routesRes, companiesRes] = await Promise.all([
+          const [bookingsRes, busesRes, routesRes, companiesRes, operatorsRes] = await Promise.all([
             fetchAPI("/bookings/company/all").catch(() => ({ bookings: [] })),
             fetchAPI("/buses/company").catch(() => ({ buses: [] })),
             fetchAPI("/routes/allRoutes").catch(() => ({ routes: [] })),
             fetchAPI("/companies/list").catch(() => ({ companies: [] })),
+            fetchAPI("/operator/company").catch(() => ({ operators: [] })),
           ]);
 
           const bookingsList = bookingsRes.bookings || [];
           const busesList = busesRes.buses || busesRes.data || [];
           const routesList = routesRes.routes || routesRes.data || [];
           const companiesList = companiesRes.companies || [];
+          const operatorsList = operatorsRes.operators || [];
 
-          const totalRev = bookingsList.reduce((acc: number, b: any) => {
-              if (b.bookingStatus === 'cancelled' || b.bookingStatus === 'refunded' || b.status === 'cancelled') return acc;
-              return acc + (b.totalAmount || 0) - (b.refundAmount || 0);
-          }, 0);
-
-          setStats({
-            bookings: companiesList.length,
-            revenue: totalRev,
-            buses: busesList.length,
-            routes: routesList.length,
-            operators: 0,
+          setRawSuperadminData({
+            bookings: bookingsList,
+            buses: busesList,
+            routes: routesList,
+            companies: companiesList,
+            operators: operatorsList,
           });
           setCompanies(companiesList);
         } else {
@@ -193,6 +207,63 @@ export default function Home() {
     }
     loadData();
   }, []);
+
+  // Recalculate Superadmin stats when globalCompanyId changes
+  useEffect(() => {
+    if (user?.role !== "superadmin") return;
+
+    const { bookings, buses, routes, companies, operators } = rawSuperadminData;
+
+    if (globalCompanyId) {
+      const filteredBuses = buses.filter(
+        (b: any) => (typeof b.company === "object" ? b.company?._id : b.company) === globalCompanyId
+      );
+      const filteredRoutes = routes.filter(
+        (r: any) => (typeof r.company === "object" ? r.company?._id : r.company) === globalCompanyId
+      );
+      const filteredOperators = operators.filter(
+        (op: any) => (typeof op.company === "object" ? op.company?._id : op.company) === globalCompanyId
+      );
+      const filteredBookings = bookings.filter((b: any) => {
+        const compId =
+          typeof b.schedule?.company === "object"
+            ? b.schedule.company?._id
+            : b.schedule?.company ||
+              (typeof b.bus?.company === "object" ? b.bus.company?._id : b.bus?.company);
+        return compId === globalCompanyId;
+      });
+
+      const totalRev = filteredBookings.reduce((acc: number, b: any) => {
+        if (b.bookingStatus === "cancelled" || b.bookingStatus === "refunded" || b.status === "cancelled") return acc;
+        return acc + (b.totalAmount || 0) - (b.refundAmount || 0);
+      }, 0);
+
+      setStats({
+        bookings: filteredBookings.filter(
+          (b: any) => b.bookingStatus !== "cancelled" && b.bookingStatus !== "refunded" && b.status !== "cancelled"
+        ).length,
+        revenue: totalRev,
+        buses: filteredBuses.length,
+        routes: filteredRoutes.length,
+        operators: filteredOperators.length,
+      });
+    } else {
+      const totalRev = bookings.reduce((acc: number, b: any) => {
+        if (b.bookingStatus === "cancelled" || b.bookingStatus === "refunded" || b.status === "cancelled") return acc;
+        return acc + (b.totalAmount || 0) - (b.refundAmount || 0);
+      }, 0);
+
+      const approvedCompanies = companies.filter((c: any) => c.status === "approved" || !c.status);
+
+      setStats({
+        bookings: approvedCompanies.length,
+        revenue: totalRev,
+        buses: buses.length,
+        routes: routes.length,
+        operators: operators.length,
+      });
+    }
+  }, [globalCompanyId, rawSuperadminData, user]);
 
   const handleViewPassengers = async (trip: any) => {
     setSelectedTrip(trip);
@@ -314,14 +385,14 @@ export default function Home() {
     <main className={styles.container}>
       <header className={styles.header}>
         <h1 className={styles.title}>
-            {user?.role === "superadmin" ? "Global System Analytics" : 
+            {user?.role === "superadmin" ? (globalCompanyId && selectedCompany ? `${selectedCompany.name} - Operations` : "Global System Analytics") : 
              isCompanyManager ? "Company Operations Command Center" :
              isCityManager ? "Terminal Operations Board" :
              user?.role === "operator" ? "Duty Operations Board" : 
              "Company Performance Overview"}
         </h1>
         <p className={styles.subtitle}>
-            {user?.role === "superadmin" ? "Real-time logistics, partners, and network telemetry." : 
+            {user?.role === "superadmin" ? (globalCompanyId && selectedCompany ? `Viewing operational telemetry, fleet, routes, and revenue for ${selectedCompany.name}.` : "Real-time logistics, partners, and network telemetry.") : 
              isCompanyManager ? "Real-time fleet operations, route networks, departure schedules, and personnel strength." :
              isCityManager ? `Terminal schedules and conductor management for ${user?.operatorScope?.cities?.join(", ") || "assigned terminal"}.` :
              user?.role === "operator" ? "Manage assigned departures, passenger manifests, and route milestones." : 
@@ -371,8 +442,8 @@ export default function Home() {
         </div>
       ) : (
         <div className={styles.content}>
-          {/* Quick Action Shortcuts for Company Manager */}
-          {isCompanyManager && (
+          {/* Quick Action Shortcuts for Company Manager OR Superadmin viewing a specific company */}
+          {(isCompanyManager || (user?.role === "superadmin" && globalCompanyId && selectedCompany)) && (
             <div className={styles.quickActionsGrid}>
               <button className={styles.quickActionCard} onClick={() => router.push('/buses')}>
                 <div className={styles.quickActionIcon}>
@@ -380,7 +451,7 @@ export default function Home() {
                 </div>
                 <div className={styles.quickActionInfo}>
                   <h4 className={styles.quickActionTitle}>Company Fleet</h4>
-                  <p className={styles.quickActionDesc}>Register and view company buses</p>
+                  <p className={styles.quickActionDesc}>Inspect buses & configurations</p>
                 </div>
               </button>
 
@@ -390,7 +461,7 @@ export default function Home() {
                 </div>
                 <div className={styles.quickActionInfo}>
                   <h4 className={styles.quickActionTitle}>Network Routes</h4>
-                  <p className={styles.quickActionDesc}>Manage intercity travel corridors</p>
+                  <p className={styles.quickActionDesc}>Manage city travel corridors</p>
                 </div>
               </button>
 
@@ -400,7 +471,7 @@ export default function Home() {
                 </div>
                 <div className={styles.quickActionInfo}>
                   <h4 className={styles.quickActionTitle}>Dispatch Schedules</h4>
-                  <p className={styles.quickActionDesc}>Create trips and assign conductors</p>
+                  <p className={styles.quickActionDesc}>Trip dispatches and assignments</p>
                 </div>
               </button>
 
@@ -409,8 +480,8 @@ export default function Home() {
                   <UserPlus size={20} />
                 </div>
                 <div className={styles.quickActionInfo}>
-                  <h4 className={styles.quickActionTitle}>Operator Staff</h4>
-                  <p className={styles.quickActionDesc}>Supervise city managers & drivers</p>
+                  <h4 className={styles.quickActionTitle}>Company Operators</h4>
+                  <p className={styles.quickActionDesc}>Supervise managers & conductors</p>
                 </div>
               </button>
             </div>
@@ -419,32 +490,32 @@ export default function Home() {
           {/* Stats KPI Cards */}
           <div className={styles.grid}>
             <DashboardCard 
-                title={user?.role === 'superadmin' ? "Active Companies" : 
+                title={user?.role === 'superadmin' ? (globalCompanyId ? "Confirmed Bookings" : "Active Companies") : 
                        isCompanyManager ? "Scheduled Trips" :
                        isCityManager ? "Terminal Trips" :
                        user?.role === 'operator' ? "My Assigned Trips" : 
                        "Total Bookings"} 
                 value={stats.bookings.toString()} 
-                trend={user?.role === 'superadmin' ? "Partner Businesses" : 
+                trend={user?.role === 'superadmin' ? (globalCompanyId ? "Company Bookings" : "Partner Businesses") : 
                        isCompanyManager ? "Active Departures" :
                        isCityManager ? "City Schedules" :
                        user?.role === 'operator' ? "Current Schedule" : 
                        "Confirmed Trips"} 
                 trendType="up"
-                icon={user?.role === 'superadmin' ? <Building2 size={18} /> : 
+                icon={user?.role === 'superadmin' ? (globalCompanyId ? <Ticket size={18} /> : <Building2 size={18} />) : 
                       (user?.role === 'operator' ? <CalendarClock size={18} /> : <Ticket size={18} />)}
             />
             {user?.role !== 'operator' && (
               <DashboardCard 
-                  title={user?.role === 'superadmin' ? "Gross System Volume" : "Total Payout Amount"} 
+                  title={user?.role === 'superadmin' ? (globalCompanyId ? "Company Revenue" : "Gross System Volume") : "Total Payout Amount"} 
                   value={`PKR ${stats.revenue.toLocaleString()}`} 
-                  trend={user?.role === 'superadmin' ? "System Revenue" : "Earnings to Date"} 
+                  trend={user?.role === 'superadmin' ? (globalCompanyId ? "Revenue from Bookings" : "System Revenue") : "Earnings to Date"} 
                   trendType="up"
                   icon={<DollarSign size={18} />}
               />
             )}
             <DashboardCard 
-                title={user?.role === 'superadmin' ? "Global Fleet Size" : 
+                title={user?.role === 'superadmin' ? (globalCompanyId ? "Company Fleet" : "Global Fleet Size") : 
                        isCityManager ? "Terminal Buses" : "Operational Fleet"} 
                 value={stats.buses.toString()} 
                 trend="Active Fleet Units" 
@@ -460,7 +531,7 @@ export default function Home() {
                   icon={<Route size={18} />}
               />
             )}
-            {(isCompanyManager || isCityManager || user?.role === 'companyadmin') && (
+            {(isCompanyManager || isCityManager || user?.role === 'companyadmin' || (user?.role === 'superadmin' && globalCompanyId)) && (
               <DashboardCard 
                   title="Company Personnel" 
                   value={(stats.operators || 0).toString()} 
@@ -474,6 +545,36 @@ export default function Home() {
           {/* Main Content Area */}
           {user?.role === "superadmin" ? (
             <div className={styles.superadminContent}>
+              {globalCompanyId && selectedCompany && (
+                <section className={styles.tableSection}>
+                  <div className={styles.sectionHeader}>
+                    <Building2 size={16} className={styles.sectionIcon} />
+                    <h2>Company Details: {selectedCompany.name}</h2>
+                  </div>
+                  <div className={styles.operatorInfo} style={{ padding: "8px 0" }}>
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Email</span>
+                      <span className={styles.infoValue}>{selectedCompany.email || "N/A"}</span>
+                    </div>
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Phone</span>
+                      <span className={styles.infoValue}>{selectedCompany.phone || "N/A"}</span>
+                    </div>
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Address</span>
+                      <span className={styles.infoValue}>{selectedCompany.address || "N/A"}</span>
+                    </div>
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Status</span>
+                      <span className="badge badge-success">
+                        <CheckCircle2 size={11} />
+                        <span>Active Partner</span>
+                      </span>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               <section className={styles.tableSection}>
                 <div className={styles.sectionHeader}>
                   <Clock size={16} className={styles.sectionIcon} />
@@ -520,45 +621,47 @@ export default function Home() {
                 </div>
               </section>
 
-              <section className={styles.tableSection}>
-                <div className={styles.sectionHeader}>
-                  <Building2 size={16} className={styles.sectionIcon} />
-                  <h2>Registered Transport Companies</h2>
-                </div>
-                <div className="table-responsive">
-                  {companies.filter(c => c.status === 'approved').length === 0 ? (
-                    <p className={styles.noRequests}>No active companies registered.</p>
-                  ) : (
-                    <table className={styles.customTable}>
-                      <thead>
-                        <tr>
-                          <th>Company Name</th>
-                          <th>Email</th>
-                          <th>Phone</th>
-                          <th>Address</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {companies.filter(c => c.status === 'approved').map((company) => (
-                          <tr key={company._id}>
-                            <td><strong>{company.name}</strong></td>
-                            <td>{company.email}</td>
-                            <td>{company.phone}</td>
-                            <td>{company.address}</td>
-                            <td>
-                              <span className="badge badge-success">
-                                <CheckCircle2 size={11} />
-                                <span>Approved</span>
-                              </span>
-                            </td>
+              {!globalCompanyId && (
+                <section className={styles.tableSection}>
+                  <div className={styles.sectionHeader}>
+                    <Building2 size={16} className={styles.sectionIcon} />
+                    <h2>Registered Transport Companies</h2>
+                  </div>
+                  <div className="table-responsive">
+                    {companies.filter(c => c.status === 'approved').length === 0 ? (
+                      <p className={styles.noRequests}>No active companies registered.</p>
+                    ) : (
+                      <table className={styles.customTable}>
+                        <thead>
+                          <tr>
+                            <th>Company Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Address</th>
+                            <th>Status</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </section>
+                        </thead>
+                        <tbody>
+                          {companies.filter(c => c.status === 'approved').map((company) => (
+                            <tr key={company._id}>
+                              <td><strong>{company.name}</strong></td>
+                              <td>{company.email}</td>
+                              <td>{company.phone}</td>
+                              <td>{company.address}</td>
+                              <td>
+                                <span className="badge badge-success">
+                                  <CheckCircle2 size={11} />
+                                  <span>Approved</span>
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </section>
+              )}
             </div>
           ) : isCompanyManager ? (
             <div className={styles.operatorContent}>

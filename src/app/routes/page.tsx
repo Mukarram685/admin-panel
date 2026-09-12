@@ -8,11 +8,13 @@ import {
     ArrowRight,
     Clock,
     Compass,
-    Route
+    Route,
+    Building2
 } from "lucide-react";
 import { fetchAPI } from "@/utils/api";
 import DataTable from "@/component/DataTable/DataTable";
 import Modal from "@/component/Modal/Modal";
+import { useCompanyFilter } from "@/context/CompanyFilterContext";
 
 export default function RoutesPage() {
     const [routes, setRoutes] = useState([]);
@@ -20,6 +22,8 @@ export default function RoutesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRoute, setSelectedRoute] = useState<any>(null);
     const [error, setError] = useState("");
+    const [user, setUser] = useState<any>(null);
+    const { selectedCompanyId: globalCompanyId, selectedCompany } = useCompanyFilter();
 
     const [formData, setFormData] = useState({
         from: "",
@@ -43,6 +47,14 @@ export default function RoutesPage() {
     };
 
     useEffect(() => {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+            try {
+                setUser(JSON.parse(userStr));
+            } catch (e) {
+                console.error(e);
+            }
+        }
         loadRoutes();
     }, []);
 
@@ -52,7 +64,8 @@ export default function RoutesPage() {
         try {
             const bodyData = { 
                 ...formData, 
-                distance: Number(formData.distance) 
+                distance: Number(formData.distance),
+                ...(user?.role === "superadmin" && globalCompanyId ? { company: globalCompanyId } : {})
             };
             
             const endpoint = selectedRoute ? `/routes/updateRoute/${selectedRoute._id}` : "/routes/createRoute";
@@ -95,6 +108,15 @@ export default function RoutesPage() {
         setIsModalOpen(true);
     };
 
+    const displayedRoutes = (user?.role === "superadmin" && globalCompanyId)
+        ? routes.filter((r: any) => {
+            const compId = typeof r.company === "object" && r.company !== null
+                ? (r.company._id || r.company.id)
+                : r.company;
+            return compId === globalCompanyId;
+        })
+        : routes;
+
     const columns = [
         { 
             key: "routePath", 
@@ -115,6 +137,18 @@ export default function RoutesPage() {
                 </div>
             )
         },
+        ...(user?.role === "superadmin" && !globalCompanyId ? [{
+            key: "company",
+            header: "Company",
+            render: (r: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Building2 size={13} color="var(--primary)" />
+                    <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>
+                        {typeof r.company === 'object' ? r.company?.name : "N/A"}
+                    </span>
+                </div>
+            )
+        }] : []),
         { 
             key: "distance", 
             header: "Distance", 
@@ -127,7 +161,7 @@ export default function RoutesPage() {
         },
         { 
             key: "duration", 
-            header: "Estimated Duration",
+            header: "Estimated Duration", 
             render: (r: any) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}>
                     <Clock size={13} color="var(--text-secondary)" />
@@ -165,8 +199,16 @@ export default function RoutesPage() {
         <main className="page-container">
             <header className="page-header">
                 <div>
-                    <h1 className="page-title">Routes & Networks</h1>
-                    <p className="page-subtitle">Configure departure terminals, arrival destinations, mileage, and transit schedules.</p>
+                    <h1 className="page-title">
+                        {user?.role === "superadmin" && selectedCompany 
+                            ? `${selectedCompany.name} - Intercity Routes` 
+                            : "Routes & Networks"}
+                    </h1>
+                    <p className="page-subtitle">
+                        {user?.role === "superadmin" && selectedCompany 
+                            ? `Viewing transit corridors and schedules for ${selectedCompany.name}.` 
+                            : "Configure departure terminals, arrival destinations, mileage, and transit schedules."}
+                    </p>
                 </div>
                 <button 
                     onClick={() => { 
@@ -182,9 +224,9 @@ export default function RoutesPage() {
             </header>
 
             <DataTable 
-                title="Configured Transit Paths" 
+                title={user?.role === "superadmin" && selectedCompany ? `${selectedCompany.name} Transit Corridors` : "Configured Transit Paths"} 
                 columns={columns} 
-                data={routes} 
+                data={displayedRoutes} 
                 loading={loading} 
                 onRowClick={openEditModal} 
             />

@@ -304,6 +304,50 @@
     transform: scale(0.98);
 }
 
+.countBadge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    margin-left: auto;
+}
+
+.activeNavItem .countBadge {
+    background: rgba(99, 102, 241, 0.3);
+    color: #c7d2fe;
+}
+
+.companyInitial {
+    font-size: 11px;
+    font-weight: 700;
+    color: #a5b4fc;
+    letter-spacing: -0.02em;
+}
+
+.activeNavItem .companyInitial {
+    color: #ffffff;
+}
+
+.companyListContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.companyListContainer::-webkit-scrollbar {
+    width: 4px;
+}
+
+.companyListContainer::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
 .footer {
     margin-top: auto;
     padding-top: 14px;

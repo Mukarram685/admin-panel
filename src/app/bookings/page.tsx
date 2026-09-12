@@ -1,29 +1,25 @@
 "use client";
-import { useEffect, useState } from "react";
-import { Ticket, Wallet, ShieldCheck, Lock, Loader2, Sparkles } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Ticket, Wallet, ShieldCheck, Lock, Loader2, Sparkles, Building2 } from "lucide-react";
 import { fetchAPI } from "@/utils/api";
 import DashboardCard from "@/component/DashboardCard/DashboardCard";
+import { useCompanyFilter } from "@/context/CompanyFilterContext";
 
 export default function BookingsPage() {
-    const [stats, setStats] = useState({
-        count: 0,
-        amount: 0
-    });
+    const [bookings, setBookings] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<any>(null);
+    const { selectedCompanyId: globalCompanyId, selectedCompany } = useCompanyFilter();
 
     const loadData = async () => {
         try {
             setLoading(true);
-            const res = await fetchAPI("/bookings/company/all");
-            const bookings = res.data || res.bookings || [];
-            
-            const activeBookings = bookings.filter((b: any) => b.status !== 'cancelled' && b.bookingStatus !== 'cancelled' && b.bookingStatus !== 'refunded');
-            const totalAmount = activeBookings.reduce((acc: number, b: any) => acc + (b.totalAmount || 0) - (b.refundAmount || 0), 0);
+            const userStr = localStorage.getItem("user");
+            if (userStr) setUser(JSON.parse(userStr));
 
-            setStats({
-                count: activeBookings.length,
-                amount: totalAmount
-            });
+            const res = await fetchAPI("/bookings/company/all");
+            const allBookings = res.data || res.bookings || [];
+            setBookings(allBookings);
         } catch (err: any) {
             console.error(err);
         } finally {
@@ -35,12 +31,39 @@ export default function BookingsPage() {
         loadData();
     }, []);
 
+    const stats = useMemo(() => {
+        const filtered = (user?.role === "superadmin" && globalCompanyId)
+            ? bookings.filter((b: any) => {
+                const compId = typeof b.company === "object" && b.company !== null
+                    ? (b.company._id || b.company.id)
+                    : b.company;
+                return compId === globalCompanyId;
+            })
+            : bookings;
+
+        const activeBookings = filtered.filter((b: any) => b.status !== 'cancelled' && b.bookingStatus !== 'cancelled' && b.bookingStatus !== 'refunded');
+        const totalAmount = activeBookings.reduce((acc: number, b: any) => acc + (b.totalAmount || 0) - (b.refundAmount || 0), 0);
+
+        return {
+            count: activeBookings.length,
+            amount: totalAmount
+        };
+    }, [bookings, globalCompanyId, user]);
+
     return (
         <main className="page-container">
             <header className="page-header">
                 <div>
-                    <h1 className="page-title">Bookings Summary</h1>
-                    <p className="page-subtitle">Consolidated operational metrics and aggregated revenue tracking.</p>
+                    <h1 className="page-title">
+                        {user?.role === "superadmin" && selectedCompany 
+                            ? `${selectedCompany.name} - Bookings Summary` 
+                            : "Bookings Summary"}
+                    </h1>
+                    <p className="page-subtitle">
+                        {user?.role === "superadmin" && selectedCompany 
+                            ? `Consolidated operational metrics and aggregated revenue tracking for ${selectedCompany.name}.` 
+                            : "Consolidated operational metrics and aggregated revenue tracking."}
+                    </p>
                 </div>
             </header>
 

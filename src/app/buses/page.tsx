@@ -22,6 +22,7 @@ import {
 import { fetchAPI } from "@/utils/api";
 import DataTable from "@/component/DataTable/DataTable";
 import Modal from "@/component/Modal/Modal";
+import { useCompanyFilter } from "@/context/CompanyFilterContext";
 
 export default function BusesPage() {
     const [buses, setBuses] = useState([]);
@@ -33,6 +34,7 @@ export default function BusesPage() {
     const [user, setUser] = useState<any>(null);
     const [companies, setCompanies] = useState<any[]>([]);
     const [selectedCompanyId, setSelectedCompanyId] = useState("");
+    const { selectedCompanyId: globalCompanyId, selectedCompany } = useCompanyFilter();
 
     // Dynamic Amenities
     const [availableAmenities, setAvailableAmenities] = useState<string[]>([
@@ -168,6 +170,15 @@ export default function BusesPage() {
         setIsModalOpen(true);
     };
 
+    const displayedBuses = (user?.role === "superadmin" && globalCompanyId)
+        ? buses.filter((b: any) => {
+            const compId = typeof b.company === "object" && b.company !== null
+                ? (b.company._id || b.company.id)
+                : b.company;
+            return compId === globalCompanyId;
+        })
+        : buses;
+
     const columns = [
         { 
             key: "busNumber", 
@@ -181,6 +192,18 @@ export default function BusesPage() {
                 </div>
             )
         },
+        ...(user?.role === "superadmin" && !globalCompanyId ? [{
+            key: "company",
+            header: "Company",
+            render: (r: any) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Building2 size={13} color="var(--primary)" />
+                    <span style={{ fontWeight: 500, color: 'var(--foreground)' }}>
+                        {typeof r.company === 'object' ? r.company?.name : "N/A"}
+                    </span>
+                </div>
+            )
+        }] : []),
         { 
             key: "registrationNumber", 
             header: "Registration",
@@ -229,7 +252,7 @@ export default function BusesPage() {
                 );
             }
         },
-        {
+        { 
             key: "status", 
             header: "Status", 
             render: (r: any) => (
@@ -239,7 +262,7 @@ export default function BusesPage() {
                 </span>
             )
         },
-        {
+        { 
             key: "actions", 
             header: "Actions", 
             render: (r: any) => (
@@ -269,14 +292,25 @@ export default function BusesPage() {
         <main className="page-container">
             <header className="page-header">
                 <div>
-                    <h1 className="page-title">Fleet Management</h1>
-                    <p className="page-subtitle">Track vehicles, bus specifications, seating capacity, and onboard amenities.</p>
+                    <h1 className="page-title">
+                        {user?.role === "superadmin" && selectedCompany 
+                            ? `${selectedCompany.name} - Fleet Inventory` 
+                            : "Fleet Management"}
+                    </h1>
+                    <p className="page-subtitle">
+                        {user?.role === "superadmin" && selectedCompany 
+                            ? `Managing registered bus fleet for ${selectedCompany.name}.` 
+                            : "Track vehicles, bus specifications, seating capacity, and onboard amenities."}
+                    </p>
                 </div>
                 <button 
                     onClick={() => { 
                         setSelectedBus(null); 
                         setFormData({ busNumber: "", registrationNumber: "", type: "AC", totalSeats: 40 }); 
                         setSelectedAmenities([]);
+                        if (user?.role === "superadmin" && globalCompanyId) {
+                            setSelectedCompanyId(globalCompanyId);
+                        }
                         setIsModalOpen(true); 
                     }} 
                     className="btn-primary"
@@ -287,9 +321,9 @@ export default function BusesPage() {
             </header>
 
             <DataTable 
-                title="Active Bus Fleet" 
+                title={user?.role === "superadmin" && selectedCompany ? `${selectedCompany.name} Active Fleet` : "Active Bus Fleet"} 
                 columns={columns} 
-                data={buses} 
+                data={displayedBuses} 
                 loading={loading} 
                 onRowClick={openEditModal} 
             />
