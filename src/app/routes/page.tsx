@@ -34,6 +34,63 @@ export default function RoutesPage() {
         duration: "",
     });
 
+    const [durationHours, setDurationHours] = useState("");
+    const [durationMinutes, setDurationMinutes] = useState("");
+
+    const parseDuration = (dur: string) => {
+        if (!dur) return { hours: "", minutes: "" };
+        const str = dur.trim().toLowerCase();
+        let hours = 0;
+        let minutes = 0;
+        let found = false;
+
+        const hMatch = str.match(/(\d+)\s*h/);
+        const mMatch = str.match(/(\d+)\s*m/);
+
+        if (hMatch) {
+            hours = parseInt(hMatch[1], 10);
+            found = true;
+        }
+        if (mMatch) {
+            minutes = parseInt(mMatch[1], 10);
+            found = true;
+        }
+
+        if (!found && str.includes(":")) {
+            const parts = str.split(":");
+            hours = parseInt(parts[0], 10) || 0;
+            minutes = parseInt(parts[1], 10) || 0;
+            found = true;
+        }
+
+        if (!found && /^\d+$/.test(str)) {
+            hours = parseInt(str, 10);
+            found = true;
+        }
+
+        return {
+            hours: found && hours > 0 ? String(hours) : (found && hours === 0 && minutes > 0 ? "0" : (found ? String(hours) : "")),
+            minutes: found && minutes > 0 ? String(minutes) : ""
+        };
+    };
+
+    const formatDuration = (h: string | number, m: string | number) => {
+        const hoursNum = parseInt(String(h), 10);
+        const minsNum = parseInt(String(m), 10);
+
+        const hasHours = !isNaN(hoursNum) && hoursNum > 0;
+        const hasMins = !isNaN(minsNum) && minsNum > 0;
+
+        if (hasHours && hasMins) {
+            return `${hoursNum}h ${minsNum}m`;
+        } else if (hasHours) {
+            return `${hoursNum}h`;
+        } else if (hasMins) {
+            return `${minsNum}m`;
+        }
+        return "";
+    };
+
     const loadRoutes = async () => {
         try {
             setLoading(true);
@@ -62,8 +119,10 @@ export default function RoutesPage() {
         e.preventDefault();
         setError("");
         try {
+            const finalDuration = formatDuration(durationHours, durationMinutes) || formData.duration || "N/A";
             const bodyData = { 
                 ...formData, 
+                duration: finalDuration,
                 distance: Number(formData.distance),
                 ...(user?.role === "superadmin" && globalCompanyId ? { company: globalCompanyId } : {})
             };
@@ -78,6 +137,8 @@ export default function RoutesPage() {
 
             setIsModalOpen(false);
             setFormData({ from: "", to: "", fromCity: "", toCity: "", distance: "", duration: "" });
+            setDurationHours("");
+            setDurationMinutes("");
             setSelectedRoute(null);
             loadRoutes();
         } catch (err: any) {
@@ -105,6 +166,9 @@ export default function RoutesPage() {
             distance: route.distance?.toString() || "",
             duration: route.duration || "",
         });
+        const parsed = parseDuration(route.duration || "");
+        setDurationHours(parsed.hours);
+        setDurationMinutes(parsed.minutes);
         setIsModalOpen(true);
     };
 
@@ -214,6 +278,8 @@ export default function RoutesPage() {
                     onClick={() => { 
                         setSelectedRoute(null); 
                         setFormData({ from: "", to: "", fromCity: "", toCity: "", distance: "", duration: "" }); 
+                        setDurationHours("");
+                        setDurationMinutes("");
                         setIsModalOpen(true); 
                     }} 
                     className="btn-primary"
@@ -301,14 +367,46 @@ export default function RoutesPage() {
                             />
                         </div>
                         <div className="form-group">
-                            <label className="form-label">Transit Duration</label>
-                            <input 
-                                type="text" 
-                                className="form-input" 
-                                value={formData.duration} 
-                                onChange={e => setFormData({ ...formData, duration: e.target.value })} 
-                                placeholder="e.g. 4h 30m" 
-                            />
+                            <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Transit Duration</span>
+                                {(durationHours || durationMinutes) && (
+                                    <span style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '11px', textTransform: 'none' }}>
+                                        Preview: {formatDuration(durationHours, durationMinutes)}
+                                    </span>
+                                )}
+                            </label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <input 
+                                        type="number" 
+                                        min="0" 
+                                        max="72"
+                                        className="form-input" 
+                                        style={{ paddingRight: '28px' }}
+                                        value={durationHours} 
+                                        onChange={e => setDurationHours(e.target.value)} 
+                                        placeholder="Hours" 
+                                    />
+                                    <span style={{ position: 'absolute', right: '10px', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', pointerEvents: 'none' }}>
+                                        h
+                                    </span>
+                                </div>
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <input 
+                                        type="number" 
+                                        min="0" 
+                                        max="59"
+                                        className="form-input" 
+                                        style={{ paddingRight: '28px' }}
+                                        value={durationMinutes} 
+                                        onChange={e => setDurationMinutes(e.target.value)} 
+                                        placeholder="Minutes" 
+                                    />
+                                    <span style={{ position: 'absolute', right: '10px', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', pointerEvents: 'none' }}>
+                                        m
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

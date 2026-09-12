@@ -89,6 +89,46 @@ export default function SchedulesPage() {
         }
     };
 
+    const parseScheduleTime = (s: any) => {
+        const d = s.departureDate ? new Date(s.departureDate).getTime() : 0;
+        const timeStr = s.departureTime || "00:00";
+        const cleanStr = timeStr.trim();
+        const isPM = /pm/i.test(cleanStr);
+        const isAM = /am/i.test(cleanStr);
+        const parts = cleanStr.replace(/[^\d:]/g, '').split(':');
+        let hours = Number(parts[0]) || 0;
+        let minutes = Number(parts[1]) || 0;
+        if (isPM && hours < 12) hours += 12;
+        if (isAM && hours === 12) hours = 0;
+        return d + (hours * 60 + minutes) * 60 * 1000;
+    };
+
+    const sortSchedulesList = (list: any[]) => {
+        const isDone = (status: string) => status === 'completed' || status === 'cancelled';
+        return [...list].sort((a: any, b: any) => {
+            const aDone = isDone(a.status);
+            const bDone = isDone(b.status);
+
+            // 1. Active / Upcoming trips first, Completed / Cancelled trips at the bottom
+            if (!aDone && bDone) return -1;
+            if (aDone && !bDone) return 1;
+
+            const aTime = parseScheduleTime(a);
+            const bTime = parseScheduleTime(b);
+
+            if (!aDone && !bDone) {
+                // In-progress trip at the very top
+                if (a.status === 'in-progress' && b.status !== 'in-progress') return -1;
+                if (b.status === 'in-progress' && a.status !== 'in-progress') return 1;
+                // Nearest upcoming departure first (ascending)
+                return aTime - bTime;
+            } else {
+                // Most recently completed trip first (descending)
+                return bTime - aTime;
+            }
+        });
+    };
+
     const loadDropdowns = async () => {
         if (user?.role === 'operator' && (!user?.operatorType || user?.operatorType === 'trip_operator')) return;
         try {
@@ -99,7 +139,13 @@ export default function SchedulesPage() {
             ]);
             setAvailableRoutes(routesRes.data || routesRes.routes || []);
             setAvailableBuses(busesRes.buses || busesRes.data || []);
-            setAvailableOperators(operatorsRes.operators || operatorsRes.data || []);
+            
+            const rawOps = operatorsRes.operators || operatorsRes.data || [];
+            // STRICT FILTER: Exclude company_manager and city_manager, only allow conductors / trip operators
+            const conductors = rawOps.filter((op: any) => 
+                op.operatorType !== 'company_manager' && op.operatorType !== 'city_manager'
+            );
+            setAvailableOperators(conductors);
         } catch (err) {
             console.error("Failed to load reference data", err);
         }
@@ -220,7 +266,7 @@ export default function SchedulesPage() {
         }
     };
 
-    const displayedSchedules = (user?.role === "superadmin" && globalCompanyId)
+    const filteredSchedules = (user?.role === "superadmin" && globalCompanyId)
         ? schedules.filter((s: any) => {
             const compId = typeof s.company === "object" && s.company !== null
                 ? (s.company._id || s.company.id)
@@ -228,6 +274,30 @@ export default function SchedulesPage() {
             return compId === globalCompanyId;
         })
         : schedules;
+
+    const displayedSchedules = sortSchedulesList(filteredSchedules);
+
+    // Filter dropdowns by selected company when superadmin is viewing a specific company
+    const filteredModalRoutes = (user?.role === "superadmin" && globalCompanyId)
+        ? availableRoutes.filter((r: any) => {
+            const compId = typeof r.company === "object" ? r.company?._id : r.company;
+            return !compId || compId === globalCompanyId;
+        })
+        : availableRoutes;
+
+    const filteredModalBuses = (user?.role === "superadmin" && globalCompanyId)
+        ? availableBuses.filter((b: any) => {
+            const compId = typeof b.company === "object" ? b.company?._id : b.company;
+            return !compId || compId === globalCompanyId;
+        })
+        : availableBuses;
+
+    const filteredModalOperators = (user?.role === "superadmin" && globalCompanyId)
+        ? availableOperators.filter((o: any) => {
+            const compId = typeof o.company === "object" ? o.company?._id : o.company;
+            return !compId || compId === globalCompanyId;
+        })
+        : availableOperators;
 
     const columns = [
         {
@@ -403,7 +473,7 @@ export default function SchedulesPage() {
                         <label className="form-label">Select Route</label>
                         <select required className="form-select" value={formData.routeId} onChange={e => setFormData({ ...formData, routeId: e.target.value })}>
                             <option value="" disabled>Choose a route...</option>
-                            {availableRoutes.map(r => <option key={r._id} value={r._id}>{r.fromCity} → {r.toCity} ({r.distance}km)</option>)}
+                            {filteredModalRoutes.map(r => <option key={r._id} value={r._id}>{r.fromCity} → {r.toCity} ({r.distance}km)</option>)}
                         </select>
                     </div>
 
@@ -411,15 +481,23 @@ export default function SchedulesPage() {
                         <label className="form-label">Assign Bus</label>
                         <select required className="form-select" value={formData.busId} onChange={e => setFormData({ ...formData, busId: e.target.value })}>
                             <option value="" disabled>Choose a bus...</option>
-                            {availableBuses.map(b => <option key={b._id} value={b._id}>{b.busNumber} - {b.type} ({b.totalSeats} seats)</option>)}
+                            {filteredModalBuses.map(b => <option key={b._id} value={b._id}>{b.busNumber} - {b.type} ({b.totalSeats} seats)</option>)}
                         </select>
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Assign Operator / Conductor</label>
+                        <label className="form-label">Assign Conductor (Trip Operator)</label>
                         <select required className="form-select" value={formData.operatorId} onChange={e => setFormData({ ...formData, operatorId: e.target.value })}>
-                            <option value="" disabled>Choose an operator...</option>
-                            {availableOperators.map(o => <option key={o._id} value={o._id}>{o.name} ({o.email})</option>)}
+                            <option value="" disabled>Choose a conductor...</option>
+                            {filteredModalOperators.length === 0 ? (
+                                <option value="" disabled>No active conductors available</option>
+                            ) : (
+                                filteredModalOperators.map(o => (
+                                    <option key={o._id} value={o._id}>
+                                        {o.name} ({o.email}) - Conductor
+                                    </option>
+                                ))
+                            )}
                         </select>
                     </div>
 
@@ -522,7 +600,7 @@ export default function SchedulesPage() {
                             onChange={e => setEditFormData({ ...editFormData, busId: e.target.value })}
                         >
                             <option value="" disabled>Choose a bus...</option>
-                            {availableBuses.map(b => (
+                            {filteredModalBuses.map(b => (
                                 <option key={b._id} value={b._id}>
                                     {b.busNumber} - {b.type} ({b.totalSeats} seats)
                                 </option>
@@ -531,19 +609,23 @@ export default function SchedulesPage() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Assign New Operator</label>
+                        <label className="form-label">Assign New Conductor</label>
                         <select 
                             required 
                             className="form-select" 
                             value={editFormData.operatorId} 
                             onChange={e => setEditFormData({ ...editFormData, operatorId: e.target.value })}
                         >
-                            <option value="" disabled>Choose an operator...</option>
-                            {availableOperators.map(o => (
-                                <option key={o._id} value={o._id}>
-                                    {o.name} ({o.email})
-                                </option>
-                            ))}
+                            <option value="" disabled>Choose a conductor...</option>
+                            {filteredModalOperators.length === 0 ? (
+                                <option value="" disabled>No active conductors available</option>
+                            ) : (
+                                filteredModalOperators.map(o => (
+                                    <option key={o._id} value={o._id}>
+                                        {o.name} ({o.email}) - Conductor
+                                    </option>
+                                ))
+                            )}
                         </select>
                     </div>
 
