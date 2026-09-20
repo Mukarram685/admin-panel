@@ -160,10 +160,10 @@ export default function Header({ isSidebarOpen = false, onToggleSidebar }: Heade
             </nav>
 
             <div className={styles.rightSection}>
-                <div className={styles.searchContainer}>
+                {/* <div className={styles.searchContainer}>
                     <Search size={15} className={styles.searchIcon} />
                     <input type="text" placeholder="Search operations..." className={styles.search} />
-                </div>
+                </div> */}
                 
                 <div className={styles.profile}>
                     <div className={styles.avatar} title={userName}>

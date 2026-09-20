@@ -12,7 +12,8 @@ import {
     Lock,
     Phone,
     Building2,
-    Check
+    Check,
+    Key
 } from "lucide-react";
 import DataTable from "@/component/DataTable/DataTable";
 import Modal from "@/component/Modal/Modal";
@@ -39,12 +40,19 @@ export default function OperatorsPage() {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isScopeModalOpen, setIsScopeModalOpen] = useState(false);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
     const [error, setError] = useState("");
     const [user, setUser] = useState<any>(null);
     const [companies, setCompanies] = useState<any[]>([]);
     const [selectedCompanyId, setSelectedCompanyId] = useState("");
     const { selectedCompanyId: globalCompanyId, selectedCompany } = useCompanyFilter();
+
+    // Password reset state
+    const [passwordData, setPasswordData] = useState({ newPassword: "", confirmPassword: "" });
+    const [passwordLoading, setPasswordLoading] = useState(false);
+    const [passwordError, setPasswordError] = useState("");
+    const [passwordSuccess, setPasswordSuccess] = useState("");
 
     // Form states
     const [formData, setFormData] = useState({
@@ -194,6 +202,60 @@ export default function OperatorsPage() {
         setIsScopeModalOpen(true);
     };
 
+    const canChangePassword = (target: Operator) => {
+        if (!user) return false;
+        if (user.role === "superadmin") return true;
+        if (user.role === "companyadmin") return target.role !== "superadmin";
+        if (user.role === "operator" && user.operatorType === "company_manager") {
+            if (target.role === "superadmin" || target.role === "companyadmin") return false;
+            if (target.operatorType === "company_manager" && target._id !== user._id) return false;
+            return true;
+        }
+        return false;
+    };
+
+    const openPasswordModal = (op: Operator) => {
+        setSelectedOperator(op);
+        setPasswordData({ newPassword: "", confirmPassword: "" });
+        setPasswordError("");
+        setPasswordSuccess("");
+        setIsPasswordModalOpen(true);
+    };
+
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedOperator) return;
+        setPasswordError("");
+        setPasswordSuccess("");
+
+        if (passwordData.newPassword.length < 6) {
+            setPasswordError("Password must be at least 6 characters long");
+            return;
+        }
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            setPasswordError("Passwords do not match");
+            return;
+        }
+
+        try {
+            setPasswordLoading(true);
+            const res = await fetchAPI(`/operator/change-password/${selectedOperator._id}`, {
+                method: "PUT",
+                body: JSON.stringify({ newPassword: passwordData.newPassword }),
+            });
+            setPasswordSuccess(res.message || "Password updated successfully!");
+            setPasswordData({ newPassword: "", confirmPassword: "" });
+            setTimeout(() => {
+                setIsPasswordModalOpen(false);
+                setPasswordSuccess("");
+            }, 1500);
+        } catch (err: any) {
+            setPasswordError(err.message || "Failed to update password");
+        } finally {
+            setPasswordLoading(false);
+        }
+    };
+
     const displayedOperators = (user?.role === "superadmin" && globalCompanyId)
         ? operators.filter((op: any) => {
             const compId = typeof op.company === "object" && op.company !== null
@@ -256,7 +318,7 @@ export default function OperatorsPage() {
             render: (row: Operator) => {
                 const canManageScope = user?.role === "superadmin" || user?.role === "companyadmin" || user?.operatorType === "company_manager";
                 return (
-                    <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         {canManageScope && row.status === "pending" && (
                             <button 
                                 onClick={() => handleStatusUpdate(row._id, "approve")}
@@ -275,6 +337,29 @@ export default function OperatorsPage() {
                             >
                                 <Sliders size={13} />
                                 <span>Scope</span>
+                            </button>
+                        )}
+                        {canChangePassword(row) && (
+                            <button 
+                                onClick={() => openPasswordModal(row)}
+                                className="btn-icon-warning"
+                                title="Change Password"
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '4px 8px',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    borderRadius: '6px',
+                                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                                    background: 'rgba(245, 158, 11, 0.1)',
+                                    color: '#f59e0b',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <Key size={13} />
+                                <span>Password</span>
                             </button>
                         )}
                     </div>
@@ -439,6 +524,102 @@ export default function OperatorsPage() {
                         <button type="submit" className="btn-primary">
                             <Sliders size={15} />
                             <span>Save Scope</span>
+                        </button>
+                    </div>
+                </form>
+            </Modal>
+
+            {/* Change Password Modal */}
+            <Modal
+                isOpen={isPasswordModalOpen}
+                onClose={() => {
+                    setIsPasswordModalOpen(false);
+                    setPasswordError("");
+                    setPasswordSuccess("");
+                }}
+                title={`Change Password: ${selectedOperator?.name || ""}`}
+            >
+                <form onSubmit={handlePasswordSubmit}>
+                    <div style={{
+                        marginBottom: "16px",
+                        padding: "10px 14px",
+                        background: "rgba(255, 255, 255, 0.04)",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(255, 255, 255, 0.08)"
+                    }}>
+                        <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--foreground)" }}>
+                            {selectedOperator?.name}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "2px" }}>
+                            {selectedOperator?.email} • <span style={{ textTransform: "capitalize" }}>{selectedOperator?.operatorType?.replace('_', ' ') || selectedOperator?.role}</span>
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">New Password</label>
+                        <input
+                            type="password"
+                            required
+                            minLength={6}
+                            className="form-input"
+                            placeholder="Enter new password (min 6 characters)"
+                            value={passwordData.newPassword}
+                            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Confirm New Password</label>
+                        <input
+                            type="password"
+                            required
+                            minLength={6}
+                            className="form-input"
+                            placeholder="Re-enter new password"
+                            value={passwordData.confirmPassword}
+                            onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                        />
+                    </div>
+
+                    {passwordError && <div className="error-text">{passwordError}</div>}
+                    {passwordSuccess && (
+                        <div style={{
+                            background: "rgba(34, 197, 94, 0.1)",
+                            color: "#22c55e",
+                            padding: "10px 14px",
+                            borderRadius: "var(--radius-md, 8px)",
+                            fontSize: "13px",
+                            marginTop: "14px",
+                            border: "1px solid rgba(34, 197, 94, 0.25)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px"
+                        }}>
+                            <CheckCircle2 size={15} />
+                            <span>{passwordSuccess}</span>
+                        </div>
+                    )}
+
+                    <div className="modal-actions">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsPasswordModalOpen(false);
+                                setPasswordError("");
+                                setPasswordSuccess("");
+                            }}
+                            className="btn-secondary"
+                            disabled={passwordLoading}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            className="btn-primary"
+                            disabled={passwordLoading}
+                        >
+                            <Key size={15} />
+                            <span>{passwordLoading ? "Updating..." : "Update Password"}</span>
                         </button>
                     </div>
                 </form>
