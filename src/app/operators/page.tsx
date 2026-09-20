@@ -256,7 +256,24 @@ export default function OperatorsPage() {
         }
     };
 
-    const validOperators = operators.filter((op: any) => op.role !== "companyadmin" && op.role !== "superadmin");
+    const validOperators = operators.filter((op: any) => {
+        // Exclude superadmin & companyadmin
+        if (op.role === "companyadmin" || op.role === "superadmin") return false;
+
+        // Exclude the currently logged-in user themselves
+        const currentUserId = user?._id || user?.id;
+        if (currentUserId && (op._id === currentUserId || op.id === currentUserId)) return false;
+
+        // Exclude logged-in user by email matching as well
+        if (user?.email && op.email && op.email.toLowerCase() === user.email.toLowerCase()) return false;
+
+        // Company managers only manage subordinate staff (city managers and trip operators)
+        if (user?.role === "operator" && user?.operatorType === "company_manager") {
+            if (op.operatorType === "company_manager") return false;
+        }
+
+        return true;
+    });
 
     const displayedOperators = (user?.role === "superadmin" && globalCompanyId)
         ? validOperators.filter((op: any) => {
