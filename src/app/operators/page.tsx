@@ -204,10 +204,10 @@ export default function OperatorsPage() {
 
     const canChangePassword = (target: Operator) => {
         if (!user) return false;
+        if (target.role === "companyadmin" || target.role === "superadmin") return false;
         if (user.role === "superadmin") return true;
-        if (user.role === "companyadmin") return target.role !== "superadmin";
+        if (user.role === "companyadmin") return true;
         if (user.role === "operator" && user.operatorType === "company_manager") {
-            if (target.role === "superadmin" || target.role === "companyadmin") return false;
             if (target.operatorType === "company_manager" && target._id !== user._id) return false;
             return true;
         }
@@ -256,14 +256,16 @@ export default function OperatorsPage() {
         }
     };
 
+    const validOperators = operators.filter((op: any) => op.role !== "companyadmin" && op.role !== "superadmin");
+
     const displayedOperators = (user?.role === "superadmin" && globalCompanyId)
-        ? operators.filter((op: any) => {
+        ? validOperators.filter((op: any) => {
             const compId = typeof op.company === "object" && op.company !== null
                 ? (op.company._id || op.company.id)
                 : op.company;
             return compId === globalCompanyId;
         })
-        : operators;
+        : validOperators;
 
     const columns = [
         { 
