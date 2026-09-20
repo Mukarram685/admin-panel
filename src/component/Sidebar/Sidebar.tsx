@@ -68,10 +68,10 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             roles: ["superadmin", "companyadmin", "operator"]
         },
         { 
-            label: "Companies", 
+            label: userRole === "companyadmin" ? "My Company" : "Companies", 
             path: "/companies", 
             icon: Building2,
-            roles: ["superadmin"]
+            roles: ["superadmin", "companyadmin"]
         },
         { 
             label: "Operators", 
@@ -114,7 +114,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     const visibleNavItems = navItems.filter(item => {
         if (userRole === "superadmin") return true;
         if (userRole === "companyadmin") {
-            return item.path !== "/companies";
+            return true;
         }
         if (userRole === "operator") {
             if (userOperatorType === "company_manager") {

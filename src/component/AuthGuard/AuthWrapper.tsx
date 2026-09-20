@@ -19,9 +19,7 @@ export default function AuthWrapper({ children }: { children: React.ReactNode })
 
         if (path === "/login") return true;
         if (role === "superadmin") return true;
-        if (role === "companyadmin") {
-            return path !== "/companies";
-        }
+        if (role === "companyadmin") return true;
         if (role === "operator") {
             if (path === "/" || path === "/schedules") return true;
             if (opType === "company_manager") {
