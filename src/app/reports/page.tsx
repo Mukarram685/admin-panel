@@ -30,6 +30,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [rawBookings, setRawBookings] = useState<any[]>([]);
+  const [rawBuses, setRawBuses] = useState<any[]>([]);
   const [revenueData, setRevenueData] = useState<any[]>([]);
   const [bookingData, setBookingData] = useState<any[]>([]);
   const { selectedCompanyId: globalCompanyId, selectedCompany } = useCompanyFilter();
@@ -41,10 +42,16 @@ export default function Reports() {
         const userStr = localStorage.getItem("user");
         if (userStr) setUser(JSON.parse(userStr));
         
-        // Fetch booking data for reports
-        const bookingsRes = await fetchAPI("/bookings/company/all").catch(() => ({ bookings: [] }));
+        // Fetch booking and bus data for reports
+        const [bookingsRes, busesRes] = await Promise.all([
+          fetchAPI("/bookings/company/all").catch(() => ({ bookings: [] })),
+          fetchAPI("/buses/company").catch(() => ({ buses: [] }))
+        ]);
+
         const bookingsList = bookingsRes.bookings || bookingsRes.data || [];
+        const busesList = busesRes.buses || busesRes.data || [];
         setRawBookings(bookingsList);
+        setRawBuses(busesList);
       } catch (err: any) {
         console.error("Failed to load report data:", err);
       } finally {
@@ -60,10 +67,21 @@ export default function Reports() {
       ? rawBookings.filter((b: any) => {
           const compId = typeof b.company === "object" && b.company !== null
             ? (b.company._id || b.company.id)
-            : b.company;
+            : (typeof b.schedule?.company === "object" && b.schedule?.company !== null
+                ? (b.schedule.company._id || b.schedule.company.id)
+                : b.company || b.schedule?.company);
           return compId === globalCompanyId;
         })
       : rawBookings;
+
+    const busesList = (user?.role === "superadmin" && globalCompanyId)
+      ? rawBuses.filter((b: any) => {
+          const compId = typeof b.company === "object" && b.company !== null
+            ? (b.company._id || b.company.id)
+            : b.company;
+          return compId === globalCompanyId;
+        })
+      : rawBuses;
 
     // Calculate stats
     const totalRev = bookingsList.reduce((acc: number, b: any) => {
@@ -72,11 +90,12 @@ export default function Reports() {
     }, 0);
 
     const cancelledCount = bookingsList.filter((b: any) => b.bookingStatus === 'cancelled' || b.bookingStatus === 'refunded' || b.status === 'cancelled').length;
+    const activeBusesCount = busesList.filter((b: any) => b.status === 'active' || !b.status).length;
 
     setStats({
       totalRevenue: totalRev,
       totalBookings: bookingsList.length,
-      activeBuses: 0,
+      activeBuses: activeBusesCount,
       cancelledTrips: cancelledCount,
     });
 
@@ -94,7 +113,7 @@ export default function Reports() {
       bookingStatus: b.bookingStatus || b.status || "confirmed",
       createdAt: b.createdAt ? new Date(b.createdAt).toLocaleDateString() : "Recent",
     })));
-  }, [rawBookings, globalCompanyId, user]);
+  }, [rawBookings, rawBuses, globalCompanyId, user]);
 
   const renderStatusBadge = (status: string) => {
     const s = (status || "").toLowerCase();
