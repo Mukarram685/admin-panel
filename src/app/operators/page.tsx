@@ -126,6 +126,12 @@ export default function OperatorsPage() {
         e.preventDefault();
         setError("");
         try {
+            const phone = formData.phoneNumber.trim().replace(/[\s-]/g, "");
+            const phoneRegex = /^(\+92|0)?3[0-9]{9}$/;
+            if (!phoneRegex.test(phone)) {
+                throw new Error("Please enter a valid phone number (e.g. 03001234567 or +923001234567)");
+            }
+
             const userStr = localStorage.getItem("user");
             if (!userStr) throw new Error("User session not found");
             const userData = JSON.parse(userStr);
@@ -148,6 +154,7 @@ export default function OperatorsPage() {
                 method: "POST",
                 body: JSON.stringify({ 
                     ...formData, 
+                    phoneNumber: phone,
                     role: "operator", 
                     company: companyId 
                 }),
@@ -457,12 +464,21 @@ export default function OperatorsPage() {
                     <div className="form-group">
                         <label className="form-label">Phone Number</label>
                         <input
-                            type="text"
+                            type="tel"
                             required
+                            maxLength={13}
                             className="form-input"
-                            placeholder="e.g. 03001234567"
+                            placeholder="e.g. 03001234567 or +923001234567"
                             value={formData.phoneNumber}
-                            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                            onChange={(e) => {
+                                let val = e.target.value.replace(/[^\d+]/g, "");
+                                if (val.includes("+")) {
+                                    val = (val.startsWith("+") ? "+" : "") + val.replace(/\+/g, "");
+                                }
+                                if (val.length <= 13) {
+                                    setFormData({ ...formData, phoneNumber: val });
+                                }
+                            }}
                         />
                     </div>
                     <div className="form-group">
