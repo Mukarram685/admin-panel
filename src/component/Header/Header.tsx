@@ -137,7 +137,7 @@ export default function Header({ isSidebarOpen = false, onToggleSidebar }: Heade
                     <div className={styles.logoIconBox}>
                         <BusFront size={18} />
                     </div>
-                    <span className={styles.logoText}>BookNGo</span>
+                    <span className={styles.logoText}>Book&Go</span>
                 </div>
             </div>
             

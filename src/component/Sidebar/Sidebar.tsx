@@ -214,7 +214,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                         <div className={styles.mobileLogoIcon}>
                             <BusFront size={16} />
                         </div>
-                        <span className={styles.mobileLogoText}>BookNGo</span>
+                        <span className={styles.mobileLogoText}>Book&Go</span>
                     </div>
                     <button onClick={onClose} className={styles.closeBtn} aria-label="Close sidebar">
                         <X size={18} />

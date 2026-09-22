@@ -47,7 +47,7 @@ export default function Login() {
                     <div className={styles.brandIconWrapper}>
                         <BusFront size={28} className={styles.brandIcon} />
                     </div>
-                    <h1 className={styles.title}>BookNGo</h1>
+                    <h1 className={styles.title}>Book&Go</h1>
                     <div className={styles.badgeWrapper}>
                         <span className="badge badge-primary">
                             <ShieldCheck size={12} />
@@ -71,7 +71,7 @@ export default function Login() {
                             <input
                                 type="email"
                                 className={styles.input}
-                                placeholder="admin@bookngo.com"
+                                placeholder="admin@bookandgo.com"
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
                                 required
