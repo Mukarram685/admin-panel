@@ -404,13 +404,13 @@ export default function OperatorsPage() {
                     </h1>
                     <p className="page-subtitle">
                         {user?.operatorType === "city_manager" 
-                            ? `Manage local drivers and conductors for ${user?.operatorScope?.cities?.join(", ") || "your terminal"}.`
-                            : (user?.role === "superadmin" && selectedCompany ? `Supervising active personnel and crew for ${selectedCompany.name}.` : "Manage driver assignments, city managers, and crew credentials.")}
+                            ? `Manage local operators for ${user?.operatorScope?.cities?.join(", ") || "your terminal"}.`
+                            : (user?.role === "superadmin" && selectedCompany ? `Supervising active personnel and crew for ${selectedCompany.name}.` : "Manage operator assignments, city managers, and crew credentials.")}
                     </p>
                 </div>
                 <button onClick={openAddOperatorModal} className="btn-primary">
                     <UserPlus size={15} />
-                    <span>{user?.operatorType === "city_manager" ? "Register New Conductor/Driver" : "Register New Operator"}</span>
+                    <span>{user?.operatorType === "city_manager" ? "Register New Trip Operator" : "Register New Operator"}</span>
                 </button>
             </header>
 
@@ -425,7 +425,7 @@ export default function OperatorsPage() {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={user?.operatorType === "city_manager" ? "Register Terminal Driver / Conductor" : "Register New Operator"}
+                title={user?.operatorType === "city_manager" ? "Register Terminal Trip Operator" : "Register New Operator"}
             >
                 <form onSubmit={handleRegister}>
                     <div className="form-group">
@@ -488,7 +488,7 @@ export default function OperatorsPage() {
                                 type="text" 
                                 readOnly 
                                 className="form-input" 
-                                value={`Trip Operator (Conductor/Driver) - ${user?.operatorScope?.cities?.join(", ") || "Assigned City"}`} 
+                                value={`Trip Operator - ${user?.operatorScope?.cities?.join(", ") || "Assigned City"}`} 
                             />
                         ) : (
                             <select
@@ -496,7 +496,7 @@ export default function OperatorsPage() {
                                 value={formData.operatorType}
                                 onChange={(e) => setFormData({ ...formData, operatorType: e.target.value })}
                             >
-                                <option value="trip_operator">Trip Operator (Conductor/Driver)</option>
+                                <option value="trip_operator">Trip Operator</option>
                                 <option value="city_manager">City Terminal Manager</option>
                                 <option value="company_manager">Company Dispatch Manager</option>
                             </select>
