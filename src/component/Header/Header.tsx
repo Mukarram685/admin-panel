@@ -10,6 +10,7 @@ import {
     CalendarClock,
     Ticket,
     BarChart3,
+    DollarSign,
     Search,
     LogOut,
     ShieldCheck,
@@ -85,6 +86,12 @@ export default function Header({ isSidebarOpen = false, onToggleSidebar }: Heade
             label: "Bookings", 
             path: "/bookings", 
             icon: Ticket,
+            roles: ["superadmin", "companyadmin"]
+        },
+        { 
+            label: "Payouts", 
+            path: "/payouts", 
+            icon: DollarSign,
             roles: ["superadmin", "companyadmin"]
         },
         { 

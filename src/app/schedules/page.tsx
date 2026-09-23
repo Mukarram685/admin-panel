@@ -337,7 +337,7 @@ export default function SchedulesPage() {
         },
         { 
             key: "operator", 
-            header: "Driver / Conductor", 
+            header: "Assigned Operator", 
             render: (r: any) => {
                 if (r.operator && typeof r.operator === 'object') {
                     return (
@@ -394,7 +394,7 @@ export default function SchedulesPage() {
                             <button 
                                 onClick={() => handleOpenEdit(r)} 
                                 className="btn-icon-primary"
-                                title={user?.operatorType === 'city_manager' ? "Swap Driver / Bus" : "Edit Assignment"}
+                                title={user?.operatorType === 'city_manager' ? "Swap Operator / Bus" : "Edit Assignment"}
                                 disabled={r.status === 'completed' || r.status === 'cancelled'}
                                 style={{ opacity: (r.status === 'completed' || r.status === 'cancelled') ? 0.4 : 1 }}
                             >
@@ -437,10 +437,10 @@ export default function SchedulesPage() {
                          user?.role === 'operator' ? "Assigned Duty Departures" : "Schedules & Dispatching")}
                     </h1>
                     <p className="page-subtitle">
-                        {user?.operatorType === 'city_manager' ? `Coordinate vehicle departures and swap conductors/buses for ${user?.operatorScope?.cities?.join(", ") || "your terminal"}.` :
+                        {user?.operatorType === 'city_manager' ? `Coordinate vehicle departures and swap operators/buses for ${user?.operatorScope?.cities?.join(", ") || "your terminal"}.` :
                          (user?.role === 'superadmin' && selectedCompany ? `Managing active departure schedules for ${selectedCompany.name}.` :
                          user?.role === 'operator' ? "View passenger manifests, departure schedules, and update trip milestones." :
-                         "Coordinate vehicle departures, assign drivers, and manage route timings.")}
+                         "Coordinate vehicle departures, assign operators, and manage route timings.")}
                     </p>
                 </div>
                 {canDispatchSchedule && (
@@ -486,15 +486,15 @@ export default function SchedulesPage() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Assign Conductor (Trip Operator)</label>
+                        <label className="form-label">Assign Trip Operator</label>
                         <select required className="form-select" value={formData.operatorId} onChange={e => setFormData({ ...formData, operatorId: e.target.value })}>
-                            <option value="" disabled>Choose a conductor...</option>
+                            <option value="" disabled>Choose an operator...</option>
                             {filteredModalOperators.length === 0 ? (
-                                <option value="" disabled>No active conductors available</option>
+                                <option value="" disabled>No active operators available</option>
                             ) : (
                                 filteredModalOperators.map(o => (
                                     <option key={o._id} value={o._id}>
-                                        {o.name} ({o.email}) - Conductor
+                                        {o.name} ({o.email}) - Operator
                                     </option>
                                 ))
                             )}
@@ -609,20 +609,20 @@ export default function SchedulesPage() {
                     </div>
 
                     <div className="form-group">
-                        <label className="form-label">Assign New Conductor</label>
+                        <label className="form-label">Assign New Operator</label>
                         <select 
                             required 
                             className="form-select" 
                             value={editFormData.operatorId} 
                             onChange={e => setEditFormData({ ...editFormData, operatorId: e.target.value })}
                         >
-                            <option value="" disabled>Choose a conductor...</option>
+                            <option value="" disabled>Choose an operator...</option>
                             {filteredModalOperators.length === 0 ? (
-                                <option value="" disabled>No active conductors available</option>
+                                <option value="" disabled>No active operators available</option>
                             ) : (
                                 filteredModalOperators.map(o => (
                                     <option key={o._id} value={o._id}>
-                                        {o.name} ({o.email}) - Conductor
+                                        {o.name} ({o.email}) - Operator
                                     </option>
                                 ))
                             )}

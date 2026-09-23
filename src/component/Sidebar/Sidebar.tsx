@@ -104,6 +104,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             roles: ["superadmin", "companyadmin"]
         },
         { 
+            label: "Payouts", 
+            path: "/payouts", 
+            icon: DollarSign,
+            roles: ["superadmin", "companyadmin"]
+        },
+        { 
             label: "Reports", 
             path: "/reports", 
             icon: BarChart3,
@@ -172,6 +178,12 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 return [
                     { label: "All Bookings", icon: Ticket, action: () => navigate("/bookings") },
                     { label: "Revenue Aggregates", icon: DollarSign, action: () => navigate("/bookings") },
+                ];
+            case "/payouts":
+                return [
+                    { label: "Settlements Log", icon: DollarSign, action: () => navigate("/payouts") },
+                    { label: "Escrow Queue", icon: Clock, action: () => navigate("/payouts") },
+                    { label: "Financial Reports", icon: BarChart3, action: () => navigate("/reports") },
                 ];
             case "/reports":
                 return [
