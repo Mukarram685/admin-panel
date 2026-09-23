@@ -343,7 +343,7 @@ export default function Home() {
         <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>🕒 {row.departureTime} - {row.arrivalTime || 'TBD'}</div>
       </div>
     )},
-    { key: "operator", header: "Assigned Conductor", render: (row: any) => (
+    { key: "operator", header: "Assigned Operator", render: (row: any) => (
       row.operator ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <User size={12} style={{ color: 'var(--primary)' }} />
@@ -394,7 +394,7 @@ export default function Home() {
         <p className={styles.subtitle}>
             {user?.role === "superadmin" ? (globalCompanyId && selectedCompany ? `Viewing operational telemetry, fleet, routes, and revenue for ${selectedCompany.name}.` : "Real-time logistics, partners, and network telemetry.") : 
              isCompanyManager ? "Real-time fleet operations, route networks, departure schedules, and personnel strength." :
-             isCityManager ? `Terminal schedules and conductor management for ${user?.operatorScope?.cities?.join(", ") || "assigned terminal"}.` :
+             isCityManager ? `Terminal schedules and operator management for ${user?.operatorScope?.cities?.join(", ") || "assigned terminal"}.` :
              user?.role === "operator" ? "Manage assigned departures, passenger manifests, and route milestones." : 
              "Summary of bookings, operational fleet, and revenue performance."}
         </p>
@@ -481,7 +481,7 @@ export default function Home() {
                 </div>
                 <div className={styles.quickActionInfo}>
                   <h4 className={styles.quickActionTitle}>Company Operators</h4>
-                  <p className={styles.quickActionDesc}>Supervise managers & conductors</p>
+                  <p className={styles.quickActionDesc}>Supervise managers & staff operators</p>
                 </div>
               </button>
             </div>
